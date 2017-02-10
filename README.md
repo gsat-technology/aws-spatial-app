@@ -1,25 +1,34 @@
-Quickly set up a postgis database with sample data.
+Quickly run a postgis database with Flask API (work in progress)
 
-#####Launch linux
+The setup uses Docker Compose with two containers
 
-The below assumes CentOS / Amazon Linux but can easily use a differrent distro.
+- The flask app which is an API/Logic layer
+- The postgres/postGIS database
 
-#####Install docker
+The database port is exposed to the host so that you can point `psql` (or a desktop client) at it for debugging purposes. 
+
+This is the [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
+
+#####Run
 ```
-sudo su
-yum install docker
-service docker start
+https://github.com/gsat-technology/spatial
+cd spatial
+mkdir postgres_data
+#postgres_data folder will persist the database when docker isn't running
 ```
 
-#####Install psql client
+#####Install Docker engine and Docker Compose
 
+- [Docker engine installation](https://docs.docker.com/engine/installation/)
+- [Docker compose installation](https://docs.docker.com/compose/install/)
+
+#####Run docker compose
 ```
-yum install postgresql
+docker-compose -f docker-compose.yml up --build
 ```
+#####(optional) Run only postgis in docker container
 
-#####Run postgis in docker container
-
-This is a [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
+To run _only_ the postgis container (without the flask app)...
 
 Run using a volume so that if the container crashes you can just run the same docker run command again (with no loss of db data).
 
@@ -30,6 +39,9 @@ docker run -v $HOME/postgres_data:/var/lib/postgresql --name "postgis" -p 5432:5
 ```
 
 #####Create database / table
+
+In psql shell, run:
+
 ```
 DROP DATABASE IF EXISTS fortune500;
 CREATE DATABASE fortune500;
@@ -40,12 +52,12 @@ CREATE TABLE company ( id serial primary key, name  VARCHAR not null, category V
 SELECT AddGeometryColumn('company','geom_point','4326','POINT',2);
 ```
 #####Populate the database
-Install psycopg2 python package
+Install `psycopg2` python package
 ```
 yum install gcc
-pip install psycopg2 
+pip install psycopg2
 ```
-It's possible that more OS packages are required to install psycopg2. If so try this
+It's possible that more OS packages are required to install psycopg2 (depending on your OS). This works for CentOS/Amazon Linux.
 ```
 yum install postgresql-libs
 yum install postgresql-devel
@@ -64,3 +76,4 @@ psql -h localhost -U docker -p 5432 fortune500
 #bounding box query like this is approximately all of mainland US
 SELECT count(*) FROM company WHERE company.geom_point && ST_MakeEnvelope(24.31, -124.43, 49.23, -66.56, 4326);
 ```
+

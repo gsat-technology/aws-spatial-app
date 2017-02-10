@@ -1,0 +1,19 @@
+version: '2'
+services:
+  flask:
+    build: ./flaskapp
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./flaskapp:/code
+    restart: always
+  postgis:
+    image: kartoza/postgis
+    volumes:
+      - ./postgres_data:/var/lib/postgresql
+    #use 'ports' for internal docker networking
+    #ports:
+    #  - 5432:5432
+    #use 'expose' to bind to host  
+    expose:
+      - 5432

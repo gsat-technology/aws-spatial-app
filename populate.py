@@ -2,11 +2,13 @@ import sys
 import csv
 import psycopg2
 
-DB_NAME = 'fortune500'
+csv_file = 'aus_postcodes.csv'
+
+DB_NAME = 'aus_towns'
 USER = 'docker'
 HOST = 'localhost'
 PASSWORD = 'docker'
-TABLE = 'company'
+TABLE = 'town'
 
 #setup connection
 conn_str = "dbname='{}' user='{}' host='{}' password='{}'".format(DB_NAME, USER, HOST, PASSWORD)
@@ -19,20 +21,21 @@ conn.commit()
 cur.close()
 
 #insert records
-insert_template = """INSERT INTO company(name, category, location, lat, lon, geom_point) 
-                     VALUES('{}', '{}', '{}', {}, {}, st_GeomFromText('POINT({} {})', 4326));"""
+insert_template = """INSERT INTO town(postcode, name, state, lat, lon, geom_point) 
+                     VALUES({}, '{}', '{}', {}, {}, st_GeomFromText('POINT({} {})', 4326));"""
 
 cur = conn.cursor()
 
-with open('data.csv','rU') as fp:
+with open(csv_file,'rU') as fp:
     reader = csv.reader(fp)
     for row in reader:
-        name = row[0].replace("'", "''")
-        category = row[1]
-        location = row[3]
-        lat = row[6]
-        lon = row[7]
-        record = insert_template.format(name, category, location, lat, lon, lat, lon)
+        postcode = int(row[0].strip())
+        name = row[1].strip()
+        state = row[2].strip()
+        lat = row[3].strip()
+        lon = row[4].strip()
+        record = insert_template.format(postcode, name, state, lat, lon, lat, lon)
+        print record
         cur.execute(record)
         conn.commit()
 

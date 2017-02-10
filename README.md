@@ -38,42 +38,19 @@ mkdir -p ~/postgres_data
 docker run -v $HOME/postgres_data:/var/lib/postgresql --name "postgis" -p 5432:5432 -d -t kartoza/postgis
 ```
 
-#####Create database / table
-
-In psql shell, run:
-
+#####Populate database
 ```
-DROP DATABASE IF EXISTS fortune500;
-CREATE DATABASE fortune500;
-\c fortune500;
-CREATE EXTENSION postgis;
-
-CREATE TABLE company ( id serial primary key, name  VARCHAR not null, category VARCHAR not null, location VARCHAR not null, lat real not null, lon real not null);
-SELECT AddGeometryColumn('company','geom_point','4326','POINT',2);
-```
-#####Populate the database
-Install `psycopg2` python package
-```
-yum install gcc
-pip install psycopg2
-```
-It's possible that more OS packages are required to install psycopg2 (depending on your OS). This works for CentOS/Amazon Linux.
-```
-yum install postgresql-libs
-yum install postgresql-devel
-yum install python-devel
-```
-Populate
-```
-python populate.py
+psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE aus_towns;"
+psql -U docker -h localhost -p 5432 aus_towns -f aus_towns.dump.sql
 ```
 
 #####Quick test
 psql into docker container and perform a bounding box query of a box spanning the US. This should retrieve all 500 companies.
 ```
-psql -h localhost -U docker -p 5432 fortune500
+psql -h localhost -U docker -p 5432 aus_towns
 
-#bounding box query like this is approximately all of mainland US
-SELECT count(*) FROM company WHERE company.geom_point && ST_MakeEnvelope(24.31, -124.43, 49.23, -66.56, 4326);
+#bounding box query like this should get all towns in Tasmania
+SELECT * FROM town WHERE town.geom_point && ST_MakeEnvelope(-43.722542, 144.121569, -39.418224, 148.933580, 4326);
 ```
+
 

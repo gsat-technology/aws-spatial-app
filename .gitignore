@@ -3,4 +3,5 @@
 \#*\#
 .DS_STORE
 .idea
+secret/
 postgres_data/

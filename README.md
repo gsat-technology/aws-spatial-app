@@ -5,7 +5,7 @@ The setup uses Docker Compose with two containers
 - The flask app which is an API/Logic layer
 - The postgres/postGIS database
 
-The database port is exposed to the host so that you can point `psql` (or a desktop client) at it for debugging purposes. 
+The database port is exposed to the host so that you can point `psql` (or a desktop client) at it for debugging purposes.
 
 This is the [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
 
@@ -34,8 +34,8 @@ Run using a volume so that if the container crashes you can just run the same do
 
 Note that postgresql is exposed to the host on port 5432.
 ```
-mkdir -p ~/postgres_data
-docker run -v $HOME/postgres_data:/var/lib/postgresql --name "postgis" -p 5432:5432 -d -t kartoza/postgis
+mkdir -p ./postgres_data
+docker run -v postgres_data:/var/lib/postgresql --name "postgis" -p 5432:5432 -d -t kartoza/postgis
 ```
 
 #####Populate database
@@ -52,5 +52,3 @@ psql -h localhost -U docker -p 5432 aus_towns
 #bounding box query like this should get all towns in Tasmania
 SELECT * FROM town WHERE town.geom_point && ST_MakeEnvelope(-43.722542, 144.121569, -39.418224, 148.933580, 4326);
 ```
-
-

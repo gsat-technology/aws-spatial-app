@@ -31,18 +31,18 @@
 
       url = 'http://localhost:5000'
 
-      function getTowns(coords) {
-        //coords are [minLat, maxLat, minLon, maxLon
+      function retrieveTermini(coords, cb) {
+        //coords are [minLat, minLon, maxLat, maxLon]
         console.log('getTowns() coords: ' + JSON.stringify(coords));
 
         $.ajax({
-          url: url + '/town',
+          url: url + '/termini',
           type: 'get',
           data: {
             boundingBox: coords.join()
           },
           success: function(response) {
-            console.log('success');
+            cb(JSON.parse(response));
           },
           error: function(xhr) {
             console.log('error')
@@ -52,36 +52,78 @@
 
       function initMap() {
         var map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: -34.397, lng: 150.644},
+          center: {lat: -41.5405116, lng: 146.6044788},
           zoom: 8
         });
+
+        var rectangle = null;
 
         var drawingManager = new google.maps.drawing.DrawingManager({
           drawingMode: google.maps.drawing.OverlayType.MARKER,
           drawingControl: true,
           drawingControlOptions: {
             position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: ['rectangle']
+            drawingModes: ['rectangle', 'polyline']
           },
           markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
-          circleOptions: {
-            fillColor: '#ffff00',
-            fillOpacity: 1,
-            strokeWeight: 5,
+          rectangleOptions: {
+            fillColor: '#e8fdff',
+            fillOpacity: 0.3,
+            strokeWeight: 1,
             clickable: false,
-            editable: true,
+            editable: false,
             zIndex: 1
           }
         });
 
-        drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'rectanglecomplete', function(event) {
-          console.log(event.bounds);
-          getTowns([event.bounds.f.f, event.bounds.f.b, event.bounds.b.b, event.bounds.b.f])
+        drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+
+          console.log('event: ' + event.type)
+
+          retrieveTermini([event.overlay.bounds.f.f, event.overlay.bounds.b.b, event.overlay.bounds.f.b, event.overlay.bounds.b.f], function(result) {
+
+            var marker, i
+
+            var termini = result.termini;
+
+            for( i = 0; i < result.count; i++ ) {
+              console.log(termini[i]);
+
+              latlngset = new google.maps.LatLng(termini[i]['latitude'], termini[i]['longitude']);
+
+              var marker = new google.maps.Marker({
+                map: map,
+                title: termini[i]['id'].toString(),
+                position: latlngset
+              });
+
+              var content = "<h4>" + termini[i]['name'] +  "</h4>" +
+                            "<p>" + termini[i]['city'] + ", " + termini[i]['country'] + "</p>" +
+                            "<p>type: " + termini[i]['type'] + "</p>";
+
+              var infowindow = new google.maps.InfoWindow();
+
+              google.maps.event.addListener(marker,'click', (function(marker,content,infowindow){
+                return function() {
+                  infowindow.setContent(content);
+                  infowindow.open(map,marker);
+                };
+              })(marker,content,infowindow));
+
+            }
+          });
+
+          drawingManager.setDrawingMode(null);
+
+          if (event.type == google.maps.drawing.OverlayType.RECTANGLE) {
+            //this will remove the overlay
+            //event.overlay.setMap(null);
+          }
 
         });
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=API_KEY&libraries=drawing&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key=<API_KEY>&libraries=drawing&callback=initMap"
          async defer></script>
   </body>
 </html>

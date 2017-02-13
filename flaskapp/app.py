@@ -5,54 +5,67 @@ import psycopg2
 
 from flask import Flask
 from flask import request
+from flask import Response
 
 app = Flask(__name__)
 
 #DB connection
-DB_NAME = 'aus_towns'
+DB_NAME = 'spatial'
 USER = 'docker'
 HOST = 'postgis'  #docker-compose name of container
 PASSWORD = 'docker'
-TABLE = 'town'
+TABLE = 'termini'
 
 conn_str = "dbname='{}' user='{}' host='{}' password='{}'".format(DB_NAME, USER, HOST, PASSWORD)
 conn = psycopg2.connect(conn_str)
 
-@app.route("/town")
-def town():
+@app.route("/termini")
+def termini():
 
     bbox = request.args.get('boundingBox')
 
     cur = conn.cursor()
-    
+
     if bbox:
         print str(bbox)
         coord = bbox.split(',')
 
         #note just using straight up SQL statements (it's just a prototype)
-        cur.execute('SELECT * \
-                    FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {} , {}, {}, 4326);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3]))
+        query = 'SELECT * \
+                    FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {}, {}, {}, 4326);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
+        print query
+        print >> sys.stderr, query
+        cur.execute(query)
         rows = cur.fetchall()
 
         d = {
             'count': len(rows),
-            'towns': []
+            'termini': []
         }
-    
+
         for row in rows:
-            d['towns'].append({
+            print >> sys.stdout, row
+            d['termini'].append({
                                'id': row[0],
-                               'postcode': row[1],
-                               'state': row[2],
-                               'lat': row[3],
-                               'lon': row[4] })
-        return json.dumps(d)
+                               'name': row[1],
+                               'city': row[2],
+                               'country': row[3],
+                               'iata': row[4],
+                               'icao': row[5],
+                               'latitude': row[6],
+                               'longitude': row[7],
+                               'altitude': row[8],
+                               'tz_olson': row[9],
+                               'type': row[10] })
+
+        response = Response(json.dumps(d))
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
     else:
         return "please supply filter"
-    
-       
-    
+
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
-

@@ -2,7 +2,7 @@ Parameters:
 
   HostedZoneName:
     Type: String
-    Description: Route53 hosted zone domain name (! don't include trailing '.')
+    Description: Route53 hosted zone domain name e.g. yourdomain.com (don't include trailing '.')
 
   UbuntuAMIParameter:
     Type: String
@@ -12,6 +12,10 @@ Parameters:
   SpatialServicesSubDomain:
     Type: String
     Description: sub domain which API Gateway will proxy to
+
+  LetsencryptEmail:
+    Type: String
+    Description: email address for letsencrypt cert registration purposes
 
   KeyPairParameter:
     Type: AWS::EC2::KeyPair::KeyName
@@ -106,7 +110,7 @@ Resources:
         !Ref VPC
 
 
-  SpatialEC2:
+  SpatialServicesEC2:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.nano
@@ -123,13 +127,21 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          FQDN=${SpatialServicesSubDomain}.${HostedZoneName}
+          export FQDN=${SpatialServicesSubDomain}.${HostedZoneName}
+          export EMAIL=${LetsencryptEmail}
+          echo $FQDN
+          echo $EMAIL
           apt-get update
-          apt-get install git
+          apt-get install -y git
+          apt-get install -y postgresql-client
           git clone https://github.com/gsat-technology/spatial
-          chmod u+x ./spatial/ec2-conf*.sh
+          chmod u+x ./spatial/ec2-conf/*.sh
           ./spatial/ec2-conf/install-docker.sh
-          ./spatial/ec2-conf/install-nginx.sh
+          ./spatial/ec2-conf/install-nginx.sh $FQDN $EMAIL
+          docker-compose -f ./spatial/docker-compose.yml up --build -d
+          export PGPASSWORD=docker
+          psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE spatial;"
+          psql -U docker -h localhost -p 5432 spatial -f ./spatial/files/spatial.dump.sql
 
   DNSRecord:
     Type: "AWS::Route53::RecordSet"
@@ -137,6 +149,6 @@ Resources:
       HostedZoneName: !Join [ ".", [ !Ref HostedZoneName, "" ] ]
       Name: !Join [ ".", [ !Ref SpatialServicesSubDomain, !Ref HostedZoneName ] ]
       ResourceRecords:
-        - !GetAtt SpatialEC2.PublicIp
+        - !GetAtt SpatialServicesEC2.PublicIp
       TTL: 300
       Type: A

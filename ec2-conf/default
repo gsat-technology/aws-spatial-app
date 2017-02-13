@@ -1,19 +1,17 @@
 server {
 
-	listen 443 ssl default_server;
-	listen [::]:443 ssl default_server;
+	listen 443 ssl;
+	listen [::]:443 ssl;
 
         ssl on;
-        ssl_certificate /etc/letsencrypt/live/spatial.gsat.technology/cert.pem;
-        ssl_certificate_key /etc/letsencrypt/live/spatial.gsat.technology/privkey.pem;
+        ssl_certificate /etc/letsencrypt/live/{FQDN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{FQDN}/privkey.pem;
 
 	root /var/www/html;
 
-	server_name {SERVER_NAME};
+	server_name {FQDN};
 
 	location / {
-		# First attempt to serve request as file, then
-		# as directory, then fall back to displaying a 404.
-		try_files $uri $uri/ =404;
+		proxy_pass http://127.0.0.1:5000;
 	}
 }

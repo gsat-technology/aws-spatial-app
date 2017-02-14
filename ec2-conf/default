@@ -3,15 +3,21 @@ server {
 	listen 443 ssl;
 	listen [::]:443 ssl;
 
+  #Server SSL with Letsencrypt
   ssl on;
-  ssl_certificate /etc/letsencrypt/live/{FQDN}/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/{FQDN}/privkey.pem;
+  ssl_certificate /etc/letsencrypt/live/sb.gsat.technology/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/sb.gsat.technology/privkey.pem;
+
+  #Client SSL with API Gateway client cert
+  ssl_verify_client on;
+  ssl_client_certificate /etc/nginx/apig/client.crt;
 
 	root /var/www/html;
 
-	server_name {FQDN};
+	server_name sb.gsat.technology;
 
 	location / {
+	  #proxy to docker flask app
 		proxy_pass http://127.0.0.1:5000;
 	}
 }

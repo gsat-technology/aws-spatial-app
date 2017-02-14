@@ -5,8 +5,8 @@ server {
 
   #Server SSL with Letsencrypt
   ssl on;
-  ssl_certificate /etc/letsencrypt/live/sb.gsat.technology/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/sb.gsat.technology/privkey.pem;
+  ssl_certificate /etc/letsencrypt/live/{FQDN}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/{FQDN}/privkey.pem;
 
   #Client SSL with API Gateway client cert
   ssl_verify_client on;
@@ -14,7 +14,7 @@ server {
 
 	root /var/www/html;
 
-	server_name sb.gsat.technology;
+	server_name {FQDN};
 
 	location / {
 	  #proxy to docker flask app

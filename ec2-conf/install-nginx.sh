@@ -4,7 +4,7 @@
 #configures SSL first then switches in an nginx config file replaces FQDN in the file
 
 FQDN=$1
-EMAIL$2
+EMAIL=$2
 
 apt-get install -y nginx
 service nginx start

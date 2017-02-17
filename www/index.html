@@ -31,16 +31,12 @@
 
       url = 'http://localhost:5000'
 
-      function retrieveTermini(coords, cb) {
-        //coords are [minLat, minLon, maxLat, maxLon]
-        console.log('getTowns() coords: ' + JSON.stringify(coords));
+      function ajaxRequestTermini(query, cb) {
 
         $.ajax({
           url: url + '/termini',
           type: 'get',
-          data: {
-            boundingBox: coords.join()
-          },
+          data: query,
           success: function(response) {
             cb(JSON.parse(response));
           },
@@ -53,20 +49,36 @@
       function initMap() {
         var map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: -41.5405116, lng: 146.6044788},
-          zoom: 8
+          zoom: 6
         });
 
         var rectangle = null;
 
         var drawingManager = new google.maps.drawing.DrawingManager({
-          drawingMode: google.maps.drawing.OverlayType.MARKER,
+          drawingMode: null,
           drawingControl: true,
           drawingControlOptions: {
             position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: ['rectangle', 'polyline']
+            drawingModes: ['circle', 'polygon', 'rectangle']
           },
           markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
           rectangleOptions: {
+            fillColor: '#e8fdff',
+            fillOpacity: 0.3,
+            strokeWeight: 1,
+            clickable: false,
+            editable: false,
+            zIndex: 1
+          },
+          circleOptions: {
+            fillColor: '#e8fdff',
+            fillOpacity: 0.3,
+            strokeWeight: 1,
+            clickable: false,
+            editable: false,
+            zIndex: 1
+          },
+          polygonOptions: {
             fillColor: '#e8fdff',
             fillOpacity: 0.3,
             strokeWeight: 1,
@@ -78,12 +90,41 @@
 
         drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
 
-          console.log('event: ' + event.type)
+          console.log(event);
+          var shapeType = event.type;
+          var bounds = event.overlay.bounds
+          var query = 'boundingBox=';
 
-          retrieveTermini([event.overlay.bounds.f.f, event.overlay.bounds.b.b, event.overlay.bounds.f.b, event.overlay.bounds.b.f], function(result) {
+          if (shapeType == 'rectangle') {
+            console.log('shape: ' + shapeType);
+            console.log(bounds);
+            var query = query + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
+            console.log(query);
+          }
+          else if (shapeType == 'circle') {
+            console.log('shape: ' + shapeType);
+            console.log(bounds);
+
+          }
+          else if (shapeType == 'polygon') {
+            console.log('shape: ' + shapeType);
+            var points = event.overlay.getPath().getArray();
+            var latlngs = []
+
+            for (var i=0; i < points.length; i++) {
+              latlngs.push(points[i].lat() + ' ' + points[i].lng())
+            }
+
+            //close off the end of the polygon with the first point
+            //to fully enclose the shell
+            latlngs.push(points[0].lat() + ' ' + points[0].lng())
+
+            query = 'polygon=' + latlngs.join()
+          }
+
+          ajaxRequestTermini(query, function(result) {
 
             var marker, i
-
             var termini = result.termini;
 
             for( i = 0; i < result.count; i++ ) {
@@ -123,7 +164,7 @@
         });
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=<API_KEY>&libraries=drawing&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key=&libraries=drawing&callback=initMap"
          async defer></script>
   </body>
 </html>

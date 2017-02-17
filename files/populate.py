@@ -2,13 +2,13 @@ import sys
 import csv
 import psycopg2
 
-csv_file = 'aus_postcodes.csv'
+csv_file = 'airports-extended.dat'
 
-DB_NAME = 'aus_towns'
-USER = 'docker'
+DB_NAME = 'spatial'
+USER = 'george'
 HOST = 'localhost'
-PASSWORD = 'docker'
-TABLE = 'town'
+PASSWORD = ''
+TABLE = 'termini'
 
 #setup connection
 conn_str = "dbname='{}' user='{}' host='{}' password='{}'".format(DB_NAME, USER, HOST, PASSWORD)
@@ -21,22 +21,43 @@ conn.commit()
 cur.close()
 
 #insert records
-insert_template = """INSERT INTO town(postcode, name, state, lat, lon, geom_point) 
-                     VALUES({}, '{}', '{}', {}, {}, st_GeomFromText('POINT({} {})', 4326));"""
+insert_template = """INSERT INTO termini(id, name, city, country, iata, icao, latitude, longitude, altitude, timezone, type, geom_point)
+                     VALUES({}, '{}', '{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}', st_GeomFromText('POINT({} {})', 4326));"""
 
 cur = conn.cursor()
 
 with open(csv_file,'rU') as fp:
     reader = csv.reader(fp)
     for row in reader:
-        postcode = int(row[0].strip())
-        name = row[1].strip()
-        state = row[2].strip()
-        lat = row[3].strip()
-        lon = row[4].strip()
-        record = insert_template.format(postcode, name, state, lat, lon, lat, lon)
-        print record
-        cur.execute(record)
+
+        print row
+
+        id = int(row[0])
+        name = row[1]
+        city = row[2]
+        country = row[3]
+        iata = row[4]
+        icao = row[5]
+        latitude = float(row[6])
+        longitude = float(row[7])
+        altitude = float(row[8])
+        tz_olson = row[11]
+        type = row[12]
+
+        if iata == '\N':
+            iata = None
+
+        if icao == '\N':
+            icao = None
+
+        if tz_olson == '\N':
+            tz_olson = None
+
+        cur.execute("INSERT INTO termini\
+                   (id, name, city, country, iata, icao, latitude, \
+                   longitude, altitude, tz_olson, type, geom_point) \
+                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, st_GeomFromText('POINT(%s %s)', 4326));",
+                   (id, name, city, country, iata, icao, latitude, longitude, altitude, tz_olson, type, latitude, longitude))
         conn.commit()
 
 
@@ -48,4 +69,3 @@ for row in rows:
     print "record count:", row[0]
 
 conn.close()
-

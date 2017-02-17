@@ -1,5 +1,13 @@
 Example of a simple spatial app for searching for termini (airports, train stations etc.) across the world.
 
+![alt tag](https://raw.githubusercontent.com/gsat-technology/aws-spatial-app/master/resources/web_screenshot.png)
+
+###Acknowledgement
+
+Spatial data in this application was obtained as [csv data](https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat) from Open Flights ([openflights.org/data.html](http://openflights.org/data.html)) which is licensed under the [Database Contents License](http://opendatacommons.org/licenses/dbcl/1.0/).
+
+###High Level Overview
+
 _Architecture diagram (work in progress)_
 
 - Static html/javascript WUI frontend
@@ -11,7 +19,9 @@ _Architecture diagram (work in progress)_
 - Postgis (container 2) performs spatial queries on data
 
 
-EC2 Configuration
+####EC2 Configuration
+
+#####Docker
 
 - The flask app which is an API/Logic layer
 - The postgres/postGIS database
@@ -20,11 +30,13 @@ The database port is exposed to the host so that you can point `psql` (or a desk
 
 This is the [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
 
-#####Deploy on AWS
+###Deploy on AWS
 
 _TODO_
 
-#####Run Locally
+###Run Locally
+
+#####Clone
 ```
 https://github.com/gsat-technology/spatial
 cd spatial
@@ -57,21 +69,11 @@ psql -h localhost -U docker -p 5432 spatial
 SELECT * FROM termini WHERE termini.geom_point && ST_MakeEnvelope(-43.722542, 144.121569, -39.418224, 148.933580, 4326);
 ```
 
-######Notes
-data sourced from http://openflights.org/data.html
+##### Run static website frontend
 
-termini table schema:
-CREATE TABLE termini (
-  id smallint not null,
-  name  VARCHAR not null,
-  city VARCHAR not null,
-  country VARCHAR not null,
-  iata VARCHAR,
-  icao VARCHAR,  
-  latitude REAL not null,
-  longitude REAL not null,
-  altitude SMALLINT,
-  tz_olson VARCHAR,
-  type VARCHAR
-);
-SELECT AddGeometryColumn('termini','geom_point','4326','POINT',2);
+You will need a Google Maps API key. [Here's how to get one](https://developers.google.com/maps/documentation/javascript/get-api-key).
+```
+cd www
+python -m SimpleHTTPServer
+```
+Open your browser at `localhost:8000`

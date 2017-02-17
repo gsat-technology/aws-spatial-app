@@ -19,12 +19,49 @@ TABLE = 'termini'
 conn_str = "dbname='{}' user='{}' host='{}' password='{}'".format(DB_NAME, USER, HOST, PASSWORD)
 conn = psycopg2.connect(conn_str)
 
+def process_result(rows):
+    data = {
+        'count': len(rows),
+        'termini': []
+    }
+
+    for row in rows:
+        print >> sys.stdout, row
+        data['termini'].append({
+                           'id': row[0],
+                           'name': row[1],
+                           'city': row[2],
+                           'country': row[3],
+                           'iata': row[4],
+                           'icao': row[5],
+                           'latitude': row[6],
+                           'longitude': row[7],
+                           'altitude': row[8],
+                           'tz_olson': row[9],
+                           'type': row[10] })
+
+    return data
+
+
+def do_query(query_string):
+    print >> sys.stderr, query_string
+    cur = conn.cursor()
+    cur.execute(query_string)
+    rows = cur.fetchall()
+    cur.close()
+    return rows
+
+
 @app.route("/termini")
 def termini():
 
     bbox = request.args.get('boundingBox')
+    polygon = request.args.get('polygon')
 
-    cur = conn.cursor()
+    print >> sys.stderr, bbox
+    print >> sys.stderr, polygon
+
+    query = ''
 
     if bbox:
         print str(bbox)
@@ -33,36 +70,21 @@ def termini():
         #note just using straight up SQL statements (it's just a prototype)
         query = 'SELECT * \
                     FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {}, {}, {}, 4326);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
-        print query
+
+
+    elif polygon:
+
+
         print >> sys.stderr, query
-        cur.execute(query)
-        rows = cur.fetchall()
+        #query = "SELECT * FROM termini WHERE termini.geom_point &&  ST_MakePolygon(ST_GeomFromText('LINESTRING({})'));".format(polygon)
+        query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON(({}))', 4326), geom_point);".format(polygon)
+        print >> sys.stderr, query
 
-        d = {
-            'count': len(rows),
-            'termini': []
-        }
+    result = process_result(do_query(query))
 
-        for row in rows:
-            print >> sys.stdout, row
-            d['termini'].append({
-                               'id': row[0],
-                               'name': row[1],
-                               'city': row[2],
-                               'country': row[3],
-                               'iata': row[4],
-                               'icao': row[5],
-                               'latitude': row[6],
-                               'longitude': row[7],
-                               'altitude': row[8],
-                               'tz_olson': row[9],
-                               'type': row[10] })
-
-        response = Response(json.dumps(d))
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
-    else:
-        return "please supply filter"
+    response = Response(json.dumps(result))
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 
 

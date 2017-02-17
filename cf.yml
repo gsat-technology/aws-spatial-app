@@ -109,8 +109,41 @@ Resources:
       VpcId:
         !Ref VPC
 
+  EC2Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "inline-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - apigateway:GET
+                Resource: !Sub arn:aws:apigateway:${AWS::Region}::/clientcertificates/${APIGClientCertificate}
+
+  EC2InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+        - !Ref EC2Role
 
   SpatialServicesEC2:
+    DependsOn:
+      - APIGClientCertificate
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.nano
@@ -123,12 +156,15 @@ Resources:
           Value: !Join [ "-", [ !Ref "AWS::StackName", spatial-ec2  ] ]
       SecurityGroupIds:
         - !Ref EC2SecurityGroup
+      IamInstanceProfile: !Ref EC2InstanceProfile
       SubnetId: !Ref PublicSubnet
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          export APIG_CLIENT_CERT=${APIGClientCertificate}
           export FQDN=${SpatialServicesSubDomain}.${HostedZoneName}
           export EMAIL=${LetsencryptEmail}
+          export AWS_DEFAULT_REGION=${AWS::Region}
           echo $FQDN
           echo $EMAIL
           apt-get update
@@ -141,7 +177,19 @@ Resources:
           docker-compose -f ./spatial/docker-compose.yml up --build -d
           export PGPASSWORD=docker
           psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE spatial;"
+          #previous command may not work if postgis not fully in service
+          #below while loop keeps trying until it works
+          while [ $? -ne 0 ]; do sleep 1 ; psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE spatial;" ; done
           psql -U docker -h localhost -p 5432 spatial -f ./spatial/files/spatial.dump.sql
+          #configure api gateway client certificate
+          pip install awscli
+          apt-get install -y jq
+          mkdir /etc/nginx/apig
+          aws apigateway get-client-certificate --client-certificate-id $APIG_CLIENT_CERT \
+            | jq .pemEncodedCertificate --raw-output > /etc/nginx/apig/client.crt
+          service nginx restart
+
+
 
   DNSRecord:
     Type: "AWS::Route53::RecordSet"
@@ -152,3 +200,93 @@ Resources:
         - !GetAtt SpatialServicesEC2.PublicIp
       TTL: 300
       Type: A
+
+  APIGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name:
+        !Join [ "_", [ !Ref "AWS::StackName", APIG ] ]
+
+  APIGTerminiResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId:
+        !GetAtt APIGateway.RootResourceId
+      PathPart: termini
+      RestApiId: !Ref APIGateway
+
+  TerminiResourceGET:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      ResourceId:
+        !Ref APIGTerminiResource
+      RestApiId:
+        !Ref APIGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: HTTP_PROXY
+        Uri: !Sub https://${SpatialServicesSubDomain}.${HostedZoneName}/termini
+
+  TerminiResourceOPTIONS:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref APIGateway
+      ResourceId: !Ref APIGTerminiResource
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'GET'"
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseTemplates:
+            application/json: ''
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+      - StatusCode: 200
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  #Note this resource is required even though it will
+  #actually create a stage called 'dummystage' which won't
+  #be used. Some info from AWS forum here:
+  #https://forums.aws.amazon.com/thread.jspa?messageID=737087
+  APIGDeploymentProd:
+    DependsOn:
+      - APIGTerminiResource
+      - TerminiResourceGET
+    Type: "AWS::ApiGateway::Deployment"
+    Properties:
+      RestApiId:
+        !Ref APIGateway
+      StageName: dummystage
+
+  APIGStage:
+    Type: "AWS::ApiGateway::Stage"
+    Properties:
+      ClientCertificateId: !Ref APIGClientCertificate
+      DeploymentId: !Ref APIGDeploymentProd
+      RestApiId: !Ref APIGateway
+      StageName: LATEST
+
+
+  APIGClientCertificate:
+    Type: "AWS::ApiGateway::ClientCertificate"
+    Properties:
+      Description: !Sub ${AWS::Region}-client-cert
+
+Outputs:
+  APIGEndpoint:
+    Description: APIG endpoint
+    Value:
+      !Sub https://${APIGateway}.execute-api.${AWS::Region}.amazonaws.com/LATEST

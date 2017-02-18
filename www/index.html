@@ -52,7 +52,55 @@
           zoom: 6
         });
 
+        function ClearControl(controlDiv, map) {
+
+          // Set CSS for the control border.
+          var controlUI = document.createElement('div');
+          controlUI.style.backgroundColor = '#fff';
+          controlUI.style.border = '2px solid #fff';
+          controlUI.style.borderRadius = '3px';
+          controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
+          controlUI.style.cursor = 'pointer';
+          controlUI.style.marginBottom = '22px';
+          controlUI.style.marginTop = '5px';
+          controlUI.style.textAlign = 'center';
+          controlUI.title = 'Click to recenter the map';
+          controlDiv.appendChild(controlUI);
+
+          // Set CSS for the control interior.
+          var controlText = document.createElement('div');
+          controlText.style.color = 'rgb(146,146,146)';
+          controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+          controlText.style.fontSize = '12px';
+          controlText.style.lineHeight = '20px';
+          controlText.style.paddingLeft = '5px';
+          controlText.style.paddingRight = '5px';
+          controlText.innerHTML = 'clear';
+          controlUI.appendChild(controlText);
+
+          //click event for clear.
+          controlUI.addEventListener('click', function() {
+            console.log('clear');
+            for (var i=0; i < markers.length; i++) {
+              markers[i].setMap(null);
+            }
+
+            while(overlays[0])
+            {
+              overlays.pop().setMap(null);
+            }
+          });
+        }
+
+        var clearControlDiv = document.createElement('div');
+        var clearControl = new ClearControl(clearControlDiv, map);
+        clearControlDiv.index = 1;
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(clearControlDiv);
+
+        //keep reference to map markers, overlays
         var rectangle = null;
+        var markers = [];
+        var overlays = [];
 
         var drawingManager = new google.maps.drawing.DrawingManager({
           drawingMode: null,
@@ -89,6 +137,8 @@
         });
 
         drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+
+          overlays.push(event.overlay);
 
           console.log(event);
           var shapeType = event.type;
@@ -138,6 +188,9 @@
                 position: latlngset
               });
 
+              //keep track of marker (so can delete later)
+              markers.push(marker);
+
               var content = "<h4>" + termini[i]['name'] +  "</h4>" +
                             "<p>" + termini[i]['city'] + ", " + termini[i]['country'] + "</p>" +
                             "<p>type: " + termini[i]['type'] + "</p>";
@@ -164,7 +217,7 @@
         });
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=&libraries=drawing&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&libraries=drawing&callback=initMap"
          async defer></script>
   </body>
 </html>

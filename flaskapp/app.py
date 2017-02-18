@@ -26,7 +26,7 @@ def process_result(rows):
     }
 
     for row in rows:
-        print >> sys.stdout, row
+        #print >> sys.stdout, row
         data['termini'].append({
                            'id': row[0],
                            'name': row[1],
@@ -57,6 +57,7 @@ def termini():
 
     bbox = request.args.get('boundingBox')
     polygon = request.args.get('polygon')
+    circle = request.args.get('circle')
 
     print >> sys.stderr, bbox
     print >> sys.stderr, polygon
@@ -69,16 +70,15 @@ def termini():
 
         #note just using straight up SQL statements (it's just a prototype)
         query = 'SELECT * \
-                    FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {}, {}, {}, 4326);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
+                    FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {}, {}, {}, 3857);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
 
 
     elif polygon:
+        query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON(({}))', 3857), geom_point);".format(polygon)
 
+    elif circle:
+        query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, {});".format(circle)
 
-        print >> sys.stderr, query
-        #query = "SELECT * FROM termini WHERE termini.geom_point &&  ST_MakePolygon(ST_GeomFromText('LINESTRING({})'));".format(polygon)
-        query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON(({}))', 4326), geom_point);".format(polygon)
-        print >> sys.stderr, query
 
     result = process_result(do_query(query))
 

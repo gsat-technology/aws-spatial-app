@@ -80,7 +80,7 @@
 
           //click event for clear.
           controlUI.addEventListener('click', function() {
-            console.log('clear');
+            //console.log('clear');
             for (var i=0; i < markers.length; i++) {
               markers[i].setMap(null);
             }
@@ -140,24 +140,24 @@
 
           overlays.push(event.overlay);
 
-          console.log(event);
+          //console.log(event);
           var shapeType = event.type;
-          var bounds = event.overlay.bounds
-          var query = 'boundingBox=';
+          //console.log('shape: ' + shapeType);
+
+          var query = '';
 
           if (shapeType == 'rectangle') {
-            console.log('shape: ' + shapeType);
-            console.log(bounds);
-            var query = query + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
-            console.log(query);
+            var bounds = event.overlay.bounds
+            var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
           }
           else if (shapeType == 'circle') {
-            console.log('shape: ' + shapeType);
-            console.log(bounds);
+            //div rad by 5
+            var rad = (event.overlay.radius / 100000);
+
+            var query = 'circle=' + [event.overlay.center.lat(), event.overlay.center.lng(), rad].join();
 
           }
           else if (shapeType == 'polygon') {
-            console.log('shape: ' + shapeType);
             var points = event.overlay.getPath().getArray();
             var latlngs = []
 

@@ -5,9 +5,9 @@ import psycopg2
 csv_file = 'airports-extended.dat'
 
 DB_NAME = 'spatial'
-USER = 'george'
+USER = 'docker'
 HOST = 'localhost'
-PASSWORD = ''
+PASSWORD = 'docker'
 TABLE = 'termini'
 
 #setup connection
@@ -22,7 +22,7 @@ cur.close()
 
 #insert records
 insert_template = """INSERT INTO termini(id, name, city, country, iata, icao, latitude, longitude, altitude, timezone, type, geom_point)
-                     VALUES({}, '{}', '{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}', st_GeomFromText('POINT({} {})', 4326));"""
+                     VALUES({}, '{}', '{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}', st_GeomFromText('POINT({} {})', 3857));"""
 
 cur = conn.cursor()
 
@@ -56,7 +56,7 @@ with open(csv_file,'rU') as fp:
         cur.execute("INSERT INTO termini\
                    (id, name, city, country, iata, icao, latitude, \
                    longitude, altitude, tz_olson, type, geom_point) \
-                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, st_GeomFromText('POINT(%s %s)', 4326));",
+                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, st_GeomFromText('POINT(%s %s)', 3857));",
                    (id, name, city, country, iata, icao, latitude, longitude, altitude, tz_olson, type, latitude, longitude))
         conn.commit()
 

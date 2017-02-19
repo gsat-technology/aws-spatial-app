@@ -44,12 +44,45 @@ def process_result(rows):
 
 
 def do_query(query_string):
-    print >> sys.stderr, query_string
+    #print >> sys.stderr, query_string
     cur = conn.cursor()
     cur.execute(query_string)
     rows = cur.fetchall()
     cur.close()
     return rows
+
+
+def validate_input(geo_data, type):
+    #tests that inputs are at least numerical
+
+    values_lst = []
+
+    try:
+        if type == 'bbox':
+            for c in geo_data.split(','):
+                values_lst.append(c)
+
+        elif type == 'polygon':
+
+            latlng = geo_data.split(',')
+
+            for ll in latlng:
+                for c in ll.split(' '):
+                    values_lst.append(c)
+
+        elif type == 'circle':
+            v = geo_data.split(',')
+
+            for ll in v:
+                print >> sys.stderr, ll
+                values_lst.append(ll)
+
+        for v in values_lst:
+            float(v) + 1
+    except:
+        return False
+
+    return True
 
 
 @app.route("/termini")
@@ -59,32 +92,31 @@ def termini():
     polygon = request.args.get('polygon')
     circle = request.args.get('circle')
 
-    print >> sys.stderr, bbox
-    print >> sys.stderr, polygon
-
     query = ''
 
     if bbox:
-        print str(bbox)
+        print >> sys.stderr, bbox
         coord = bbox.split(',')
-
-        #note just using straight up SQL statements (it's just a prototype)
-        query = 'SELECT * \
-                    FROM {} WHERE {}.geom_point && ST_MakeEnvelope({}, {}, {}, {}, 3857);'.format(TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
-
+        if validate_input(bbox, 'bbox'):
+            query = "SELECT * FROM %s WHERE %s.geom_point && ST_MakeEnvelope(%s, %s, %s, %s, 3857);" % \
+                    (TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
 
     elif polygon:
-        query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON(({}))', 3857), geom_point);".format(polygon)
+        print >> sys.stderr, 'polygon: ' + polygon
+        if validate_input(polygon, 'polygon'):
+            query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON((%s))', 3857), geom_point);" % (polygon)
 
     elif circle:
-        query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, {});".format(circle)
+        print >> sys.stderr, circle
+        if validate_input(circle, 'circle'):
+            query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, %s);" % (circle)
+
+    if query:
+        result = process_result(do_query(query))
+        response = Response(json.dumps(result))
     else:
-        return {"error": "query needed"}
+        response = Response(json.dumps({"message": "use query params: ['boundingBox', 'polygon', 'circle']"}))
 
-
-    result = process_result(do_query(query))
-
-    response = Response(json.dumps(result))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 

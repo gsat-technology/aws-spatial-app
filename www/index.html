@@ -2,13 +2,21 @@
 <html>
   <head>
 
+    <!-- jquery -->
     <script
       src="https://code.jquery.com/jquery-3.1.1.min.js"
       integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
       crossorigin="anonymous"></script>
 
+    <!-- bootstrap -->
+    <script src="https://npmcdn.com/tether@1.2.4/dist/js/tether.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
 
-    <title>Drawing tools</title>
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <meta name="google-signin-client_id" content="{GOOGLE_OAUTH_CLIENT_ID}">
+
+    <title>Termini</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <style>
@@ -23,13 +31,118 @@
         margin: 0;
         padding: 0;
       }
+
+      #wrapper {
+        position: relative;
+        height: 100%
+      }
+
+      #over_map {
+        position: absolute; top: 10px; left: 10px; z-index: 99;
+      }
+
+      .signin-overmap {
+        position: absolute; top: 10px; left: 10px; z-index: 98;
+      }
+
+      .google-button-hidden {
+        display: none;
+      }
+
+      .signout-overmap {
+        position: absolute; top: 10px; left: 10px; z-index: 98;
+      }
+
+      .signout-overmap {
+        position: absolute; top: 10px; left: 10px; z-index: 98;
+      }
+
+      .modal-small-text {
+        font-size: small;
+      }
+
     </style>
   </head>
   <body>
-    <div id="map"></div>
+      <div id="wrapper">
+        <div id="google-signin" class="signin-overmap g-signin2" data-onsuccess="onSignIn"></div>
+        <a id="google-signout" class="google-button-hidden signout-overmap" href="#" onclick="signOut();">Sign out</a>
+        <div id="map"></div>
+      </div>
+      <!-- Modal instructions -->
+      <div class="modal fade" id="instructionsModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Termini</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Welcome to <i>Termini</i>.</p>
+              <p>Use the map tools to select places on the map to find major airports, ports and train stations around the world.</p>
+              <p>You will need to login using the Google 'Sign In' button to use this app.</p>
+              <div class="modal-small-text">
+                <p>Data in this application was sourced from <a href="http://openflights.org/data.html">Open Flights</a> which is licensed under the <a href="http://opendatacommons.org/licenses/dbcl/1.0/">Database Contents License</a>.
+                <p>Discliamer: accuracy of this data is not guaranteed.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- notice to sign in -->
+      <div class="modal fade" id="signinNotificationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-body">
+              <p>Please sign in to use <i>Termini</i></p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
+            </div>
+          </div>
+        </div>
+      </div>
     <script>
 
-      url = 'http://localhost:5000'
+    /* -- Google Sign In --*/
+
+    var google_profile = null;
+
+    function onSignIn(googleUser) {
+
+      //toggle visibility of signin/out buttons
+      $('#google-signin').addClass("google-button-hidden");
+      $('#google-signout').removeClass("google-button-hidden");
+
+      console.log('onSignIn');
+      google_profile = googleUser.getBasicProfile();
+      console.log('ID: ' + google_profile.getId()); // Do not send to your backend! Use an ID token instead.
+      console.log('Name: ' + google_profile.getName());
+      console.log('Image URL: ' + google_profile.getImageUrl());
+      console.log('Email: ' + google_profile.getEmail()); // This is null if the 'email' scope is not present.
+      }
+
+
+    function signOut() {
+
+      $('#google-signout').addClass("google-button-hidden")
+      $('#google-signin').removeClass("google-button-hidden")
+
+      var auth2 = gapi.auth2.getAuthInstance();
+      auth2.signOut().then(function () {
+        //console.log('User signed out.');
+        google_profile = null;
+      });
+    }
+
+    $('#instructionsModal').modal();
+
+      url = '{APIG}';
 
       function ajaxRequestTermini(query, cb) {
 
@@ -49,7 +162,11 @@
       function initMap() {
         var map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: -41.5405116, lng: 146.6044788},
-          zoom: 6
+          zoom: 6,
+          mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT
+          }
         });
 
         function ClearControl(controlDiv, map) {
@@ -138,86 +255,78 @@
 
         drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
 
-          overlays.push(event.overlay);
+          if (google_profile) {
+            overlays.push(event.overlay);
+            var shapeType = event.type;
+            var query = '';
 
-          //console.log(event);
-          var shapeType = event.type;
-          //console.log('shape: ' + shapeType);
-
-          var query = '';
-
-          if (shapeType == 'rectangle') {
-            var bounds = event.overlay.bounds
-            var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
-          }
-          else if (shapeType == 'circle') {
-            //div rad by 5
-            var rad = (event.overlay.radius / 100000);
-
-            var query = 'circle=' + [event.overlay.center.lat(), event.overlay.center.lng(), rad].join();
-
-          }
-          else if (shapeType == 'polygon') {
-            var points = event.overlay.getPath().getArray();
-            var latlngs = []
-
-            for (var i=0; i < points.length; i++) {
-              latlngs.push(points[i].lat() + ' ' + points[i].lng())
+            if (shapeType == 'rectangle') {
+              var bounds = event.overlay.bounds
+              var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
             }
-
-            //close off the end of the polygon with the first point
-            //to fully enclose the shell
-            latlngs.push(points[0].lat() + ' ' + points[0].lng())
-
-            query = 'polygon=' + latlngs.join()
-          }
-
-          ajaxRequestTermini(query, function(result) {
-
-            var marker, i
-            var termini = result.termini;
-
-            for( i = 0; i < result.count; i++ ) {
-              console.log(termini[i]);
-
-              latlngset = new google.maps.LatLng(termini[i]['latitude'], termini[i]['longitude']);
-
-              var marker = new google.maps.Marker({
-                map: map,
-                title: termini[i]['id'].toString(),
-                position: latlngset
-              });
-
-              //keep track of marker (so can delete later)
-              markers.push(marker);
-
-              var content = "<h4>" + termini[i]['name'] +  "</h4>" +
-                            "<p>" + termini[i]['city'] + ", " + termini[i]['country'] + "</p>" +
-                            "<p>type: " + termini[i]['type'] + "</p>";
-
-              var infowindow = new google.maps.InfoWindow();
-
-              google.maps.event.addListener(marker,'click', (function(marker,content,infowindow){
-                return function() {
-                  infowindow.setContent(content);
-                  infowindow.open(map,marker);
-                };
-              })(marker,content,infowindow));
+            else if (shapeType == 'circle') {
+              var rad = (event.overlay.radius / 100000);
+              var query = 'circle=' + [event.overlay.center.lat(), event.overlay.center.lng(), rad].join();
 
             }
-          });
+            else if (shapeType == 'polygon') {
+              var points = event.overlay.getPath().getArray();
+              var latlngs = []
 
-          drawingManager.setDrawingMode(null);
+              for (var i=0; i < points.length; i++) {
+                latlngs.push(points[i].lat() + ' ' + points[i].lng())
+              }
 
-          if (event.type == google.maps.drawing.OverlayType.RECTANGLE) {
-            //this will remove the overlay
-            //event.overlay.setMap(null);
+              //close off the end of the polygon with the first point
+              //to fully enclose the shell
+              latlngs.push(points[0].lat() + ' ' + points[0].lng())
+
+              query = 'polygon=' + latlngs.join()
+            }
+
+            ajaxRequestTermini(query, function(result) {
+
+              var marker, i
+              var termini = result.termini;
+
+              for( i = 0; i < result.count; i++ ) {
+
+                latlngset = new google.maps.LatLng(termini[i]['latitude'], termini[i]['longitude']);
+
+                var marker = new google.maps.Marker({
+                  map: map,
+                  title: termini[i]['id'].toString(),
+                  position: latlngset
+                });
+
+                //keep track of marker (so can delete later)
+                markers.push(marker);
+
+                var content = "<h4>" + termini[i]['name'] +  "</h4>" +
+                              "<p>" + termini[i]['city'] + ", " + termini[i]['country'] + "</p>" +
+                              "<p>type: " + termini[i]['type'] + "</p>";
+
+                var infowindow = new google.maps.InfoWindow();
+
+                google.maps.event.addListener(marker,'click', (function(marker,content,infowindow){
+                  return function() {
+                    infowindow.setContent(content);
+                    infowindow.open(map,marker);
+                  };
+                })(marker,content,infowindow));
+              }
+            });
+
+          } //if google_profile
+          else {
+            event.overlay.setMap(null);
+            $('#signinNotificationModal').modal();
           }
-
         });
+
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&libraries=drawing&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key={GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initMap"
          async defer></script>
   </body>
 </html>

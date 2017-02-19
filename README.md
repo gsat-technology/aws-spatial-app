@@ -1,3 +1,5 @@
+(Work in Progress)
+
 Example of a simple spatial app for searching for termini (airports, train stations etc.) across the world.
 
 ![alt tag](https://raw.githubusercontent.com/gsat-technology/aws-spatial-app/master/resources/web_screenshot.png)
@@ -19,7 +21,7 @@ _Architecture diagram (work in progress)_
 - Postgis (container 2) performs spatial queries on data
 
 
-####EC2 Configuration
+####Backend EC2 instance details
 
 #####Docker
 
@@ -31,6 +33,24 @@ The database port is exposed to the host so that you can point `psql` (or a desk
 This is the [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
 
 ###Deploy on AWS
+
+####Prerequisites
+
+#####Route53 domain
+
+_TODO_
+
+#####Setup Google OAuth
+
+1. goto: https://console.developers.google.com/apis/library
+2. In menu bar dropdown, choose 'Create Project' (optional, you could use an existing project)
+3. Left hand menu, select 'Credentials'
+4. Click 'Create Credentails'
+5. Choose 'OAuth Client ID'
+6. If prompted, configure consent screen (at least need to complete Product Name)
+7. Choose 'Application Type'='Web application'
+8. 'Authorized Javascript Origins'=<name of frontend website>
+9. Save
 
 _TODO_
 

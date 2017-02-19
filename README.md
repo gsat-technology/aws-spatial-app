@@ -2,7 +2,7 @@
 
 Example of a simple spatial app for searching for termini (airports, train stations etc.) across the world.
 
-![alt tag](https://raw.githubusercontent.com/gsat-technology/aws-spatial-app/master/resources/web_screenshot.png)
+![alt tag](https://raw.githubusercontent.com/gsat-technology/termini/master/resources/web_screenshot.png)
 
 ###Acknowledgement
 
@@ -58,8 +58,8 @@ _TODO_
 
 #####Clone
 ```
-https://github.com/gsat-technology/spatial
-cd spatial
+https://github.com/gsat-technology/termini
+cd termini
 mkdir postgres_data
 #postgres_data folder will persist the database when docker isn't running
 ```

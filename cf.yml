@@ -206,17 +206,17 @@ Resources:
           apt-get update
           apt-get install -y git
           apt-get install -y postgresql-client
-          git clone https://github.com/gsat-technology/spatial
-          chmod u+x ./spatial/ec2-conf/*.sh
-          ./spatial/ec2-conf/install-docker.sh
-          ./spatial/ec2-conf/install-nginx.sh $FQDN $EMAIL
-          docker-compose -f ./spatial/docker-compose.yml up --build -d
+          git clone https://github.com/gsat-technology/termini
+          chmod u+x ./termini/ec2-conf/*.sh
+          ./termini/ec2-conf/install-docker.sh
+          ./termini/ec2-conf/install-nginx.sh $FQDN $EMAIL
+          docker-compose -f ./termini/docker-compose.yml up --build -d
           export PGPASSWORD=docker
           psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE spatial;"
           #previous command may not work if postgis not fully in service
           #below while loop keeps trying until it works
           while [ $? -ne 0 ]; do sleep 1 ; psql -U docker -h localhost -p 5432 postgres -c "CREATE DATABASE spatial;" ; done
-          psql -U docker -h localhost -p 5432 spatial -f ./spatial/files/spatial.dump.sql
+          psql -U docker -h localhost -p 5432 spatial -f ./termini/files/spatial.dump.sql
           #configure api gateway client certificate
           pip install awscli
           apt-get install -y jq

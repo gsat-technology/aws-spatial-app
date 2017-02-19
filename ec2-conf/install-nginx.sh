@@ -20,5 +20,5 @@ EOF
 letsencrypt certonly --config /cli.ini -a webroot --webroot-path=/var/www/html -d $FQDN
 
 #replace default host config with pre-configured file and dynamically configure server_name
-sed -e s/{FQDN}/$FQDN/g ./spatial/ec2-conf/default > /etc/nginx/sites-enabled/default
+sed -e s/{FQDN}/$FQDN/g ./termini/ec2-conf/default > /etc/nginx/sites-enabled/default
 service nginx restart

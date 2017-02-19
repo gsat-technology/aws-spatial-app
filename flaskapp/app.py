@@ -78,6 +78,8 @@ def termini():
 
     elif circle:
         query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, {});".format(circle)
+    else:
+        return {"error": "query needed"}
 
 
     result = process_result(do_query(query))

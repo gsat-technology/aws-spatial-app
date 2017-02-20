@@ -61,6 +61,14 @@
         font-size: small;
       }
 
+      img.instruction {
+        width: 50%;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+        margin-bottom: 20px;
+      }
+
     </style>
   </head>
   <body>
@@ -81,6 +89,7 @@
             </div>
             <div class="modal-body">
               <p>Welcome to <i>Termini</i>.</p>
+              <img class="instruction"src="./images/demo.png"></img>
               <p>Use the map tools to select places on the map to find major airports, ports and train stations around the world.</p>
               <p>You will need to login using the Google 'Sign In' button to use this app.</p>
               <div class="modal-small-text">
@@ -109,7 +118,9 @@
       </div>
     <script>
 
-    /* -- Google Sign In --*/
+    var devMode = false;
+
+    /* ---- Google Sign In ----*/
 
     var google_profile = null;
 
@@ -140,9 +151,16 @@
       });
     }
 
-    $('#instructionsModal').modal();
+    /*
+    modal to explain what the site is about
+    */
+    if (!devMode && !localStorage.getItem('introduction')) {
+      $('#instructionsModal').modal();
+      localStorage.setItem('introduction', 'true');
+    }
 
       url = '{APIG}';
+      url = 'http://localhost:5000';
 
       function ajaxRequestTermini(query, cb) {
 
@@ -159,15 +177,19 @@
         });
       }
 
+      /* ---- Google Maps ----*/
+
       function initMap() {
+
         var map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: -41.5405116, lng: 146.6044788},
-          zoom: 6,
+          center: {lat: 10.0, lng: 73.0},
+          zoom: 3,
           mapTypeControlOptions: {
             style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
             position: google.maps.ControlPosition.TOP_RIGHT
           }
         });
+
 
         function ClearControl(controlDiv, map) {
 
@@ -179,6 +201,7 @@
           controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
           controlUI.style.cursor = 'pointer';
           controlUI.style.marginBottom = '22px';
+          controlUI.style.marginRight = '5px';
           controlUI.style.marginTop = '5px';
           controlUI.style.textAlign = 'center';
           controlUI.title = 'Click to recenter the map';
@@ -213,6 +236,43 @@
         var clearControl = new ClearControl(clearControlDiv, map);
         clearControlDiv.index = 1;
         map.controls[google.maps.ControlPosition.TOP_CENTER].push(clearControlDiv);
+
+        function InfoControl(controlDiv, map) {
+
+          // Set CSS for the control border.
+          var controlUI = document.createElement('div');
+          controlUI.style.backgroundColor = '#fff';
+          controlUI.style.border = '2px solid #fff';
+          controlUI.style.borderRadius = '3px';
+          controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
+          controlUI.style.cursor = 'pointer';
+          controlUI.style.marginBottom = '22px';
+          controlUI.style.marginTop = '5px';
+          controlUI.style.textAlign = 'center';
+          controlUI.title = 'info';
+          controlDiv.appendChild(controlUI);
+
+          // Set CSS for the control interior.
+          var controlText = document.createElement('div');
+          controlText.style.color = 'rgb(146,146,146)';
+          controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+          controlText.style.fontSize = '12px';
+          controlText.style.lineHeight = '20px';
+          controlText.style.paddingLeft = '5px';
+          controlText.style.paddingRight = '5px';
+          controlText.innerHTML = 'info';
+          controlUI.appendChild(controlText);
+
+          //click event for clear.
+          controlUI.addEventListener('click', function() {
+            $('#instructionsModal').modal();
+          });
+        }
+
+        var infoControlDiv = document.createElement('div');
+        var infoControl = new InfoControl(infoControlDiv, map);
+        infoControlDiv.index = 1;
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(infoControlDiv);
 
         //keep reference to map markers, overlays
         var rectangle = null;
@@ -255,33 +315,82 @@
 
         drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
 
-          if (google_profile) {
-            overlays.push(event.overlay);
+          //bail out of queries that cross the international dateline
+          function intl_dateline_bail(lngs) {
+            console.log('intl_dateline_bail: ' + lngs);
+
+            east = [];
+            west = [];
+
+            for (var i=0; i < lngs.length; i++) {
+              if(lngs[i] > 0) {
+                west.push(lngs[i]);
+              }
+              else if(lngs[i] < 0) {
+                east.push(lngs[i]);
+              }
+            }
+
+            if (east.length > 0 && west.length > 0) {
+              console.log('international');
+              return true;
+            }
+            else {
+              return false;
+            }
+
+          }
+
+          if (google_profile || devMode) {
+
             var shapeType = event.type;
             var query = '';
 
             if (shapeType == 'rectangle') {
-              var bounds = event.overlay.bounds
-              var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
+
+              var bounds = event.overlay.bounds;
+              if (!intl_dateline_bail([bounds.b.b, bounds.b.f])) {
+
+                overlays.push(event.overlay);
+
+                var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
+                console.log([bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join(' '))
+              }
+              else {
+                //bail out of this query and remove the overlay
+                event.overlay.setMap(null);
+              }
             }
             else if (shapeType == 'circle') {
               var rad = (event.overlay.radius / 100000);
               var query = 'circle=' + [event.overlay.center.lat(), event.overlay.center.lng(), rad].join();
-
+              overlays.push(event.overlay);
             }
             else if (shapeType == 'polygon') {
               var points = event.overlay.getPath().getArray();
-              var latlngs = []
+
+              var latlngs = [];
+              var lngs = [];
 
               for (var i=0; i < points.length; i++) {
-                latlngs.push(points[i].lat() + ' ' + points[i].lng())
+                latlngs.push(points[i].lat() + ' ' + points[i].lng());
+                lngs.push(points[i].lng());
               }
 
-              //close off the end of the polygon with the first point
-              //to fully enclose the shell
-              latlngs.push(points[0].lat() + ' ' + points[0].lng())
+              if (!intl_dateline_bail(lngs)) {
 
-              query = 'polygon=' + latlngs.join()
+                //keep reference to overlay
+                overlays.push(event.overlay);
+
+                //close off the end of the polygon with the first point
+                //to fully enclose the shell
+                latlngs.push(points[0].lat() + ' ' + points[0].lng())
+
+                query = 'polygon=' + latlngs.join()
+              }
+              else {
+                event.overlay.setMap(null);
+              }
             }
 
             ajaxRequestTermini(query, function(result) {
@@ -322,6 +431,9 @@
             event.overlay.setMap(null);
             $('#signinNotificationModal').modal();
           }
+
+          //set back to grabber tool each time
+          drawingManager.setDrawingMode(null);
         });
 
       }

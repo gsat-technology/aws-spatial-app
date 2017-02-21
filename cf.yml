@@ -1,5 +1,9 @@
 Parameters:
 
+  CognitoIdentityPoolId:
+    Type: String
+    Description: the _pre-existing_ id for a cognito identity pool
+
   HostedZoneName:
     Type: String
     Description: Route53 hosted zone domain name e.g. yourdomain.com (don't include trailing '.')
@@ -269,7 +273,7 @@ Resources:
   TerminiResourceGET:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: NONE
+      AuthorizationType: AWS_IAM
       HttpMethod: GET
       ResourceId:
         !Ref APIGTerminiResource
@@ -322,6 +326,7 @@ Resources:
         !Ref APIGateway
       StageName: dummystage
 
+
   APIGStage:
     Type: "AWS::ApiGateway::Stage"
     Properties:
@@ -329,6 +334,17 @@ Resources:
       DeploymentId: !Ref APIGDeploymentProd
       RestApiId: !Ref APIGateway
       StageName: LATEST
+      MethodSettings:
+        -
+          LoggingLevel: INFO
+          DataTraceEnabled: "true"
+          #does all resource and ticks all
+          #the boxes at the stage level
+          ResourcePath: /*
+          HttpMethod: "*"
+          #or use the below to target the 'termini' resource
+          #ResourcePath: /~1termini
+          MetricsEnabled: "true"
 
 
   APIGClientCertificate:
@@ -336,14 +352,52 @@ Resources:
     Properties:
       Description: !Sub ${AWS::Region}-client-cert
 
+  APIGAccount:
+    Type: "AWS::ApiGateway::Account"
+    Properties:
+      CloudWatchRoleArn: !GetAtt APIGCloudWatchLogsRole.Arn
+
+  APIGCloudWatchLogsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "apigateway.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "inline-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                  - logs:GetLogEvents
+                  - logs:FilterLogEvents
+                Resource: "*"
 
   PublicWebsiteS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      AccessControl: PublicRead
+      AccessControl: LogDeliveryWrite
       BucketName: !Sub ${WebsiteSubDomain}.${HostedZoneName}
       WebsiteConfiguration:
         IndexDocument: index.html
+      LoggingConfiguration:
+        LogFilePrefix: logs/
     DeletionPolicy: Delete
 
   PublicWebsitePolicy:
@@ -358,7 +412,42 @@ Resources:
             Effect: "Allow"
             Resource:
               !Join [ "", [ "arn:aws:s3:::", !Ref PublicWebsiteS3Bucket, "/*"  ] ]
+            #NotResource:
+            #  !Join [ "", [ "arn:aws:s3:::", !Ref PublicWebsiteS3Bucket, "/logs"  ] ]
             Principal: "*"
+
+  CognitoAuthedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Federated:
+                - "cognito-identity.amazonaws.com"
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPoolId
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "inline-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${APIGateway}/LATEST/GET/termini
+
 
 Outputs:
   APIGEndpoint:

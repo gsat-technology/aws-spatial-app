@@ -44,7 +44,7 @@ def process_result(rows):
 
 
 def do_query(query_string):
-    #print >> sys.stderr, query_string
+    print >> sys.stderr, query_string
     cur = conn.cursor()
     cur.execute(query_string)
     rows = cur.fetchall()
@@ -98,12 +98,17 @@ def termini():
         print >> sys.stderr, bbox
         coord = bbox.split(',')
         if validate_input(bbox, 'bbox'):
-            query = "SELECT * FROM %s WHERE %s.geom_point && ST_MakeEnvelope(%s, %s, %s, %s, 3857);" % \
-                    (TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
+            #query = "SELECT * FROM %s WHERE %s.geom_point && ST_MakeEnvelope(%s, %s, %s, %s, 3857);" % \
+            #        (TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
+
+            query = "SELECT * FROM %s WHERE %s.geom_point && \
+                     ST_SetSRID(ST_MakeBox2D(ST_Point(%s, %s), ST_Point(%s , %s)),3857)" % (TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
+
 
     elif polygon:
         print >> sys.stderr, 'polygon: ' + polygon
         if validate_input(polygon, 'polygon'):
+
             query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON((%s))', 3857), geom_point);" % (polygon)
 
     elif circle:

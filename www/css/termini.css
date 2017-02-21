@@ -1,0 +1,70 @@
+/* Always set the map height explicitly to define the size of the div
+ * element that contains the map. */
+#map {
+  height: 100%;
+}
+/* Optional: Makes the sample page fill the window. */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#wrapper {
+  position: relative;
+  height: 100%
+}
+
+#over_map {
+  position: absolute; top: 10px; left: 10px; z-index: 99;
+}
+
+.signin-overmap {
+  position: absolute; top: 10px; left: 10px; z-index: 98;
+}
+
+.google-button-hidden {
+  display: none;
+}
+
+.signout-overmap {
+  position: absolute; top: 10px; left: 10px; z-index: 98;
+}
+
+.signout-overmap {
+  position: absolute; top: 10px; left: 10px; z-index: 98;
+}
+
+.signout-button {
+  color: rgb(146,146,146) !important;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 30px;
+  padding-left: 10px;
+}
+
+#google-signout {
+  background-color: white;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  box-shadow: 0 0.01px 4px rgba(0,0,0,.3);
+  height: 50px;
+  width: 50px;
+}
+
+.modal-small-text {
+  font-size: small;
+}
+
+img.instruction {
+  width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  margin-bottom: 20px;
+  border-radius: 5px;
+}
+
+img.signin-instruction {
+  border-radius: 5px;
+  width: 120px;
+}

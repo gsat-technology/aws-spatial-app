@@ -40,10 +40,13 @@ This is the [postgres/gis container](https://github.com/kartoza/docker-postgis).
 
 _TODO_
 
-#####Setup Google OAuth
+####Configure Google APIs
 
 1. goto: https://console.developers.google.com/apis/library
-2. In menu bar dropdown, choose 'Create Project' (optional, you could use an existing project)
+2. Create a new project (optionally; you could re-use an existing project) by clicking 'Create Project' in the menu bar dropdown.
+
+#####Obtain Google Client ID
+
 3. Left hand menu, select 'Credentials'
 4. Click 'Create Credentails'
 5. Choose 'OAuth Client ID'
@@ -52,7 +55,17 @@ _TODO_
 8. 'Authorized Javascript Origins'=<name of frontend website>
 9. Save
 
-_TODO_
+#####Obtain Google Maps API Key
+
+1. Goto 'Library' area and choose 'Google Maps javascript API'
+2. Click 'Enable'
+3. Goto 'Credentials' area, click 'Create Credentials', choose 'API Key'
+4. Make a note of the API Key
+5. Click 'Restrict Key'
+6. (Optionally) give it a name
+7. Under 'key restriction' choose 'HTTP referrers' and enter the fully qualified domain name of the website that this app will be deployed at.
+
+
 
 ###Run Locally
 

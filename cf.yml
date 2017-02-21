@@ -454,3 +454,9 @@ Outputs:
     Description: APIG endpoint
     Value:
       !Sub https://${APIGateway}.execute-api.${AWS::Region}.amazonaws.com/LATEST
+
+  APIGID:
+    Description: APIG Id
+    Value:
+      !Ref APIGateway
+      

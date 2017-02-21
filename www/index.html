@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <!-- twitter summary card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gsat_technology" />
+    <meta name="twitter:title" content="Termini" />
+    <meta name="twitter:description" content="search termini around the world" />
+    <meta name="twitter:image" content="http://i.dailymail.co.uk/i/pix/2016/05/10/11/3400F46500000578-0-image-m-17_1462877004332.jpg" />
 
     <!-- jquery -->
     <script
@@ -17,8 +23,7 @@
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 
     <!-- google sign in -->
-    <meta name="google-signin-client_id" content="{GOOGLE_OAUTH_CLIENT_ID}">
-
+    <meta name="google-signin-client_id" content="313934944178-p0ilh5tmubh4bsn368n20iogq45ecfsc.apps.googleusercontent.com">
 
     <!-- AWS SDK-->
     <script src="./js/aws/aws-sdk-2.6.10.min.js"></script>
@@ -39,537 +44,69 @@
     <title>Termini</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
-    <style>
 
-      /* Always set the map height explicitly to define the size of the div
-       * element that contains the map. */
-      #map {
-        height: 100%;
-      }
-      /* Optional: Makes the sample page fill the window. */
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-
-      #wrapper {
-        position: relative;
-        height: 100%
-      }
-
-      #over_map {
-        position: absolute; top: 10px; left: 10px; z-index: 99;
-      }
-
-      .signin-overmap {
-        position: absolute; top: 10px; left: 10px; z-index: 98;
-      }
-
-      .google-button-hidden {
-        display: none;
-      }
-
-      .signout-overmap {
-        position: absolute; top: 10px; left: 10px; z-index: 98;
-      }
-
-      .signout-overmap {
-        position: absolute; top: 10px; left: 10px; z-index: 98;
-      }
-
-      .signout-button {
-        color: rgb(146,146,146) !important;
-        font-family: Roboto, Arial, sans-serif;
-        font-size: 30px;
-        padding-left: 10px;
-      }
-
-      #google-signout {
-        background-color: white;
-        border: 2px solid #fff;
-        border-radius: 3px;
-        box-shadow: 0 0.01px 4px rgba(0,0,0,.3);
-        height: 50px;
-        width: 50px;
-      }
-
-      .modal-small-text {
-        font-size: small;
-      }
-
-      img.instruction {
-        width: 50%;
-        margin-left: auto;
-        margin-right: auto;
-        display: block;
-        margin-bottom: 20px;
-        border-radius: 5px;
-      }
-
-      img.signin-instruction {
-        border-radius: 5px;
-        width: 120px;
-      }
-
-    </style>
+    <link rel="stylesheet" type="text/css" href="./css/termini.css">
   </head>
   <body>
-      <div id="wrapper">
-        <div id="google-signin" class="signin-overmap g-signin2" data-onsuccess="onSignIn"></div>
-        <div id="google-signout" class="google-button-hidden signout-overmap"><a class="signout-button" href="#" onclick="signOut();"><i class="fa fa-sign-out" aria-hidden="true"></i></a></div>
-        <div id="map"></div>
-      </div>
-      <!-- Modal instructions -->
-      <div class="modal fade" id="instructionsModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="exampleModalLabel">Termini</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
+    <div id="wrapper">
+      <div id="google-signin" class="signin-overmap" data-onsuccess="onSignIn"></div>
+      <div id="google-signout" class="google-button-hidden signout-overmap"><a class="signout-button" href="#" onclick="signOut();"><i class="fa fa-sign-out" aria-hidden="true"></i></a></div>
+      <div id="map"></div>
+    </div>
+    <!-- instructions modal -->
+    <div class="modal fade" id="instructionsModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Termini</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Welcome to <i>Termini</i>.</p>
+            <img class="instruction" src="./images/demo.png"></img>
+            <p>Use the map tools to select places on the map to find major airports, ports and train stations around the world.</p>
+            <img class="signin-instruction" src="./images/google_button.png"></img>
+            <p>You will need to login using the Google Sign In button to use this app.</p>
+            <div class="modal-small-text">
+              <p>Data in this application was sourced from <a href="http://openflights.org/data.html">Open Flights</a> which is licensed under the <a href="http://opendatacommons.org/licenses/dbcl/1.0/">Database Contents License</a>.
+              <p>Discliamer: accuracy of this data is not guaranteed.
             </div>
-            <div class="modal-body">
-              <p>Welcome to <i>Termini</i>.</p>
-              <img class="instruction" src="./images/demo.png"></img>
-              <p>Use the map tools to select places on the map to find major airports, ports and train stations around the world.</p>
-              <img class="signin-instruction" src="./images/google_button.png"></img>
-              <p>You will need to login using the Google Sign In button to use this app.</p>
-              <div class="modal-small-text">
-                <p>Data in this application was sourced from <a href="http://openflights.org/data.html">Open Flights</a> which is licensed under the <a href="http://opendatacommons.org/licenses/dbcl/1.0/">Database Contents License</a>.
-                <p>Discliamer: accuracy of this data is not guaranteed.
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
-            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
           </div>
         </div>
       </div>
-      <!-- notice to sign in -->
-      <div class="modal fade" id="signinNotificationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-body">
-              <p>Please sign in to use <i>Termini</i></p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
-            </div>
+    </div>
+    <!-- sign in modal -->
+    <div class="modal fade" id="signinNotificationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <p>Please sign in to use <i>Termini</i></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Got it</button>
           </div>
         </div>
       </div>
-    <script>
-
-      /* -- Setup -- */
-      var devMode = false;
-      var isMobile = false;
-
-      //check if user is using mobile device
-      if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
-        isMobile = true;
-      }
-
-      //modal to explain what the site is about - only show on first view
-      if (!devMode && !localStorage.getItem('introduction')) {
-        $('#instructionsModal').modal();
-        localStorage.setItem('introduction', 'true');
-      }
-
-      //AWS
-      var identityPoolId = '{COGNITO_IDENTITY_POOL_ID}'
-      var region = '{AWS_REGION}';
-      url = '{API_GATEWAY_ENDPOINT}';
-
-      AWS.config.region = region;
-      var apigClient = null;
-
-
-      /* ---- Google/Cognito Sign In ----*/
-
-      var google_profile = null;
-
-      //customise the google sign in button
-      function renderButton() {
-        console.log('renderButton()');
-        gapi.signin2.render('google-signin', {
-          'scope': 'profile email',
-          'width': 50,
-          'height': 50,
-          'longtitle': true,
-          'theme': 'light',
-          'onsuccess': onSignIn,
-          'onfailure': onSignInFailure
-        });
-      }
-
-      function onSignInFailure(error) {
-        console.log(error);
-      }
-
-      function onSignIn(googleUser) {
-
-        //toggle visibility of signin/out buttons
-        $('#google-signin').addClass("google-button-hidden");
-        $('#google-signout').removeClass("google-button-hidden");
-
-        google_profile = googleUser.getBasicProfile();
-        console.log('ID: ' + google_profile.getId()); // Do not send to your backend! Use an ID token instead.
-        console.log('Name: ' + google_profile.getName());
-        console.log('Image URL: ' + google_profile.getImageUrl());
-        console.log('Email: ' + google_profile.getEmail()); // This is null if the 'email' scope is not present.
-        console.log(googleUser.getAuthResponse().id_token);
-
-        // Add the Google access token to the Cognito credentials login map.
-        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-          IdentityPoolId: identityPoolId,
-          region: 'ap-southeast-2',
-          Logins: {
-             'accounts.google.com': googleUser.getAuthResponse().id_token
-          }
-        });
-
-        // Obtain AWS credentials
-        AWS.config.credentials.get(function(){
-          var identityId = AWS.config.credentials.identityId;
-          var accessKeyId = AWS.config.credentials.accessKeyId;
-          var secretAccessKey = AWS.config.credentials.secretAccessKey;
-          var sessionToken = AWS.config.credentials.sessionToken;
-
-          apigClient = apigClientFactory.newClient({
-           accessKey: accessKeyId,
-           secretKey: secretAccessKey,
-           sessionToken: sessionToken,
-           region: region
-          });
-        });
-      }
-
-      function signOut() {
-
-        $('#google-signout').addClass("google-button-hidden")
-        $('#google-signin').removeClass("google-button-hidden")
-
-        var auth2 = gapi.auth2.getAuthInstance();
-        auth2.signOut().then(function () {
-          //console.log('User signed out.');
-          google_profile = null;
-        });
-      }
-
-
-
-      /* ---- Google Maps ----*/
-
-      function initMap() {
-
-        //position maps elements depending on viewer type
-        var drawingToolsPosition;
-        var customButtonsPosition;
-        var showZoomControl;
-
-        if (isMobile) {
-          //mobile
-          drawingToolsPosition = google.maps.ControlPosition.TOP_RIGHT;
-          customButtonsPosition = google.maps.ControlPosition.TOP_RIGHT;
-          showZoomControl = false;
-        }
-        else {
-          //desktop
-          drawingToolsPosition = google.maps.ControlPosition.TOP_CENTER;
-          customButtonsPosition = google.maps.ControlPosition.TOP_CENTER;
-          showZoomControl = true;
-        }
-
-        //create map
-        var map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: 10.0, lng: 73.0},
-          zoom: 3,
-          zoomControl: showZoomControl,
-          streetViewControl: false,
-          mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-            position: google.maps.ControlPosition.LEFT_BOTTOM
-          }
-        });
-
-
-        function ClearControl(controlDiv, map) {
-
-          // Set CSS for the control border.
-          var controlUI = document.createElement('div');
-          controlUI.style.backgroundColor = '#fff';
-          controlUI.style.border = '2px solid #fff';
-          controlUI.style.borderRadius = '3px';
-          controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
-          controlUI.style.cursor = 'pointer';
-          controlUI.style.marginBottom = '5px';
-          controlUI.style.marginRight = '5px';
-          controlUI.style.marginLeft = '5px';
-          controlUI.style.marginTop = '5px';
-          controlUI.style.textAlign = 'center';
-          controlUI.title = 'Click to recenter the map';
-          controlDiv.appendChild(controlUI);
-
-          // Set CSS for the control interior.
-          var controlText = document.createElement('div');
-          controlText.style.color = 'rgb(146,146,146)';
-          controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
-          controlText.style.fontSize = '12px';
-          controlText.style.lineHeight = '20px';
-          controlText.style.paddingLeft = '5px';
-          controlText.style.paddingRight = '5px';
-          controlText.innerHTML = 'clear';
-          controlUI.appendChild(controlText);
-
-          //click event for clear.
-          controlUI.addEventListener('click', function() {
-            //console.log('clear');
-            for (var i=0; i < markers.length; i++) {
-              markers[i].setMap(null);
-            }
-
-            while(overlays[0])
-            {
-              overlays.pop().setMap(null);
-            }
-          });
-        }
-
-        var clearControlDiv = document.createElement('div');
-        var clearControl = new ClearControl(clearControlDiv, map);
-        clearControlDiv.index = 1;
-        map.controls[customButtonsPosition].push(clearControlDiv);
-
-        function InfoControl(controlDiv, map) {
-
-          // Set CSS for the control border.
-          var controlUI = document.createElement('div');
-          controlUI.style.backgroundColor = '#fff';
-          controlUI.style.border = '2px solid #fff';
-          controlUI.style.borderRadius = '3px';
-          controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
-          controlUI.style.cursor = 'pointer';
-          controlUI.style.marginBottom = '5px';
-          controlUI.style.marginTop = '5px';
-          controlUI.style.textAlign = 'center';
-          controlUI.title = 'info';
-          controlDiv.appendChild(controlUI);
-
-          // Set CSS for the control interior.
-          var controlText = document.createElement('div');
-          controlText.style.color = 'rgb(146,146,146)';
-          controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
-          controlText.style.fontSize = '12px';
-          controlText.style.lineHeight = '20px';
-          controlText.style.paddingLeft = '5px';
-          controlText.style.paddingRight = '5px';
-          controlText.innerHTML = 'info';
-          controlUI.appendChild(controlText);
-
-          //click event for clear.
-          controlUI.addEventListener('click', function() {
-            $('#instructionsModal').modal();
-          });
-        }
-
-        var infoControlDiv = document.createElement('div');
-        var infoControl = new InfoControl(infoControlDiv, map);
-        infoControlDiv.index = 1;
-        map.controls[customButtonsPosition].push(infoControlDiv);
-
-        //keep reference to map markers, overlays
-        var rectangle = null;
-        var markers = [];
-        var overlays = [];
-
-        var drawingManager = new google.maps.drawing.DrawingManager({
-          drawingMode: null,
-          drawingControl: true,
-          drawingControlOptions: {
-            position:drawingToolsPosition,
-            drawingModes: ['circle', 'polygon', 'rectangle']
-          },
-          markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
-          rectangleOptions: {
-            fillColor: '#e8fdff',
-            fillOpacity: 0.3,
-            strokeWeight: 1,
-            clickable: false,
-            editable: false,
-            zIndex: 1
-          },
-          circleOptions: {
-            fillColor: '#e8fdff',
-            fillOpacity: 0.3,
-            strokeWeight: 1,
-            clickable: false,
-            editable: false,
-            zIndex: 1
-          },
-          polygonOptions: {
-            fillColor: '#e8fdff',
-            fillOpacity: 0.3,
-            strokeWeight: 1,
-            clickable: false,
-            editable: false,
-            zIndex: 1
-          }
-        });
-
-        drawingManager.setMap(map);google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-
-          //bail out of queries that cross the international dateline
-          function intl_dateline_bail(lngs) {
-            console.log('intl_dateline_bail: ' + lngs);
-
-            east = [];
-            west = [];
-
-            for (var i=0; i < lngs.length; i++) {
-              if(lngs[i] > 0) {
-                west.push(lngs[i]);
-              }
-              else if(lngs[i] < 0) {
-                east.push(lngs[i]);
-              }
-            }
-
-            if (east.length > 0 && west.length > 0) {
-              console.log('international');
-              return true;
-            }
-            else {
-              return false;
-            }
-
-          }
-
-          if (google_profile || devMode) {
-
-            var shapeType = event.type;
-            var paramType = '';
-            var paramValue = '';
-
-            if (shapeType == 'rectangle') {
-
-              var bounds = event.overlay.bounds;
-              if (!intl_dateline_bail([bounds.b.b, bounds.b.f])) {
-
-                overlays.push(event.overlay);
-
-                paramValue = [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
-                paramType = 'boundingBox=';
-
-                console.log([bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join(' '))
-              }
-              else {
-                //bail out of this query and remove the overlay
-                event.overlay.setMap(null);
-              }
-            }
-            else if (shapeType == 'circle') {
-              var rad = (event.overlay.radius / 100000);
-              var query = 'circle=' + [event.overlay.center.lat(), event.overlay.center.lng(), rad].join();
-              overlays.push(event.overlay);
-            }
-            else if (shapeType == 'polygon') {
-              var points = event.overlay.getPath().getArray();
-
-              var latlngs = [];
-              var lngs = [];
-
-              for (var i=0; i < points.length; i++) {
-                latlngs.push(points[i].lat() + ' ' + points[i].lng());
-                lngs.push(points[i].lng());
-              }
-
-              if (!intl_dateline_bail(lngs)) {
-
-                //keep reference to overlay
-                overlays.push(event.overlay);
-
-                //close off the end of the polygon with the first point
-                //to fully enclose the shell
-                latlngs.push(points[0].lat() + ' ' + points[0].lng())
-
-                query = 'polygon=' + latlngs.join()
-              }
-              else {
-                event.overlay.setMap(null);
-              }
-            }
-
-            //call ajaxRequestTermini (callback processes markers)
-            ajaxRequestTermini(paramType, paramValue, function(result) {
-
-
-              var marker, i
-              var termini = result.termini;
-
-              for( i = 0; i < result.count; i++ ) {
-
-                latlngset = new google.maps.LatLng(termini[i]['latitude'], termini[i]['longitude']);
-
-                var marker = new google.maps.Marker({
-                  map: map,
-                  title: termini[i]['id'].toString(),
-                  position: latlngset
-                });
-
-                //keep track of marker (so can delete later)
-                markers.push(marker);
-
-                var content = "<h4>" + termini[i]['name'] +  "</h4>" +
-                              "<p>" + termini[i]['city'] + ", " + termini[i]['country'] + "</p>" +
-                              "<p>type: " + termini[i]['type'] + "</p>";
-
-                var infowindow = new google.maps.InfoWindow();
-
-                google.maps.event.addListener(marker,'click', (function(marker,content,infowindow){
-                  return function() {
-                    infowindow.setContent(content);
-                    infowindow.open(map,marker);
-                  };
-                })(marker,content,infowindow));
-              }
-            });
-
-          } //if google_profile
-          else {
-            event.overlay.setMap(null);
-            $('#signinNotificationModal').modal();
-          }
-
-          //set back to grabber tool each time
-          drawingManager.setDrawingMode(null);
-        });
-      } //initMap() included drawing events
-
-
-      /* -- Ajaxey stuff --*/
-      function ajaxRequestTermini(paramType, paramValue, cb) {
-
-        var params = {};
-        var body = {};
-        var additionalParams = {
-          'queryParams': {
-            boundingBox : paramValue
-          }
-        };
-
-        apigClient.terminiGet(params, body, additionalParams)
-            .then(function(result){
-                //callback with response data
-                cb(result.data);
-            }).catch( function(result){
-            // Add error callback code here.
-            //console.log('apig error');
-        });
-      }
-
-    </script>
+    </div>
+    <!-- sign in modal -->
+    <div class="modal fade" id="signedoutNotificationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <p>Please sign in again</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Okay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./js/termini.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key={GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initMap"
          async defer></script>
     <script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>

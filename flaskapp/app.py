@@ -46,10 +46,16 @@ def process_result(rows):
 def do_query(query_string):
     print >> sys.stderr, query_string
     cur = conn.cursor()
-    cur.execute(query_string)
-    rows = cur.fetchall()
+
+    try:
+        cur.execute(query_string)
+        rows = cur.fetchall()
+        return rows
+    except Exception, e:
+        pass
+
     cur.close()
-    return rows
+    return False
 
 
 def validate_input(geo_data, type):
@@ -97,6 +103,7 @@ def termini():
     if bbox:
         print >> sys.stderr, bbox
         coord = bbox.split(',')
+
         if validate_input(bbox, 'bbox'):
             #query = "SELECT * FROM %s WHERE %s.geom_point && ST_MakeEnvelope(%s, %s, %s, %s, 3857);" % \
             #        (TABLE, TABLE, coord[0], coord[1], coord[2], coord[3])
@@ -116,16 +123,27 @@ def termini():
         if validate_input(circle, 'circle'):
             query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, %s);" % (circle)
 
-    if query:
-        result = process_result(do_query(query))
-        response = Response(json.dumps(result))
-    else:
-        response = Response(json.dumps({"message": "use query params: ['boundingBox', 'polygon', 'circle']"}))
+    msg_jsn = None
 
+    status = 200
+
+    if query:
+        r = do_query(query)
+
+        if r:
+            result = process_result(r)
+            msg_jsn = result
+        else:
+            msg_jsn = {"error": "could not execute query"}
+            status = 500
+
+    else:
+        msg_jsn = {"usage": "query params: ['boundingBox=', 'polygon=', 'circle=']"}
+        status = 400
+
+    response = Response(json.dumps(msg_jsn), status=status)
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
-
-
 
 
 if __name__ == "__main__":

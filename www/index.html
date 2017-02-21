@@ -13,13 +13,34 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
 
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <!-- fontawesome -->
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- google sign in -->
     <meta name="google-signin-client_id" content="{GOOGLE_OAUTH_CLIENT_ID}">
+
+
+    <!-- AWS SDK-->
+    <script src="./js/aws/aws-sdk-2.6.10.min.js"></script>
+
+    <!-- AWS API Gateway SDK -->
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/axios/dist/axios.standalone.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/CryptoJS/rollups/sha256.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/CryptoJS/components/hmac.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/CryptoJS/components/enc-base64.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/url-template/url-template.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/lib/apiGatewayCore/utils.js"></script>
+    <script type="text/javascript" src="./js/aws/apiGateway-js-sdk/apigClient.js"></script>
 
     <title>Termini</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <style>
+
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
       #map {
@@ -57,6 +78,22 @@
         position: absolute; top: 10px; left: 10px; z-index: 98;
       }
 
+      .signout-button {
+        color: rgb(146,146,146) !important;
+        font-family: Roboto, Arial, sans-serif;
+        font-size: 30px;
+        padding-left: 10px;
+      }
+
+      #google-signout {
+        background-color: white;
+        border: 2px solid #fff;
+        border-radius: 3px;
+        box-shadow: 0 0.01px 4px rgba(0,0,0,.3);
+        height: 50px;
+        width: 50px;
+      }
+
       .modal-small-text {
         font-size: small;
       }
@@ -67,6 +104,12 @@
         margin-right: auto;
         display: block;
         margin-bottom: 20px;
+        border-radius: 5px;
+      }
+
+      img.signin-instruction {
+        border-radius: 5px;
+        width: 120px;
       }
 
     </style>
@@ -74,7 +117,7 @@
   <body>
       <div id="wrapper">
         <div id="google-signin" class="signin-overmap g-signin2" data-onsuccess="onSignIn"></div>
-        <a id="google-signout" class="google-button-hidden signout-overmap" href="#" onclick="signOut();">Sign out</a>
+        <div id="google-signout" class="google-button-hidden signout-overmap"><a class="signout-button" href="#" onclick="signOut();"><i class="fa fa-sign-out" aria-hidden="true"></i></a></div>
         <div id="map"></div>
       </div>
       <!-- Modal instructions -->
@@ -89,9 +132,10 @@
             </div>
             <div class="modal-body">
               <p>Welcome to <i>Termini</i>.</p>
-              <img class="instruction"src="./images/demo.png"></img>
+              <img class="instruction" src="./images/demo.png"></img>
               <p>Use the map tools to select places on the map to find major airports, ports and train stations around the world.</p>
-              <p>You will need to login using the Google 'Sign In' button to use this app.</p>
+              <img class="signin-instruction" src="./images/google_button.png"></img>
+              <p>You will need to login using the Google Sign In button to use this app.</p>
               <div class="modal-small-text">
                 <p>Data in this application was sourced from <a href="http://openflights.org/data.html">Open Flights</a> which is licensed under the <a href="http://opendatacommons.org/licenses/dbcl/1.0/">Database Contents License</a>.
                 <p>Discliamer: accuracy of this data is not guaranteed.
@@ -118,75 +162,135 @@
       </div>
     <script>
 
-    var devMode = false;
+      /* -- Setup -- */
+      var devMode = false;
+      var isMobile = false;
 
-    /* ---- Google Sign In ----*/
-
-    var google_profile = null;
-
-    function onSignIn(googleUser) {
-
-      //toggle visibility of signin/out buttons
-      $('#google-signin').addClass("google-button-hidden");
-      $('#google-signout').removeClass("google-button-hidden");
-
-      console.log('onSignIn');
-      google_profile = googleUser.getBasicProfile();
-      console.log('ID: ' + google_profile.getId()); // Do not send to your backend! Use an ID token instead.
-      console.log('Name: ' + google_profile.getName());
-      console.log('Image URL: ' + google_profile.getImageUrl());
-      console.log('Email: ' + google_profile.getEmail()); // This is null if the 'email' scope is not present.
+      //check if user is using mobile device
+      if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+        isMobile = true;
       }
 
+      //modal to explain what the site is about - only show on first view
+      if (!devMode && !localStorage.getItem('introduction')) {
+        $('#instructionsModal').modal();
+        localStorage.setItem('introduction', 'true');
+      }
 
-    function signOut() {
+      //AWS
+      var identityPoolId = '{COGNITO_IDENTITY_POOL_ID}'
+      var region = '{AWS_REGION}';
+      url = '{API_GATEWAY_ENDPOINT}';
 
-      $('#google-signout').addClass("google-button-hidden")
-      $('#google-signin').removeClass("google-button-hidden")
+      AWS.config.region = region;
+      var apigClient = null;
 
-      var auth2 = gapi.auth2.getAuthInstance();
-      auth2.signOut().then(function () {
-        //console.log('User signed out.');
-        google_profile = null;
-      });
-    }
 
-    /*
-    modal to explain what the site is about
-    */
-    if (!devMode && !localStorage.getItem('introduction')) {
-      $('#instructionsModal').modal();
-      localStorage.setItem('introduction', 'true');
-    }
+      /* ---- Google/Cognito Sign In ----*/
 
-      url = '{APIG}';
-      url = 'http://localhost:5000';
+      var google_profile = null;
 
-      function ajaxRequestTermini(query, cb) {
-
-        $.ajax({
-          url: url + '/termini',
-          type: 'get',
-          data: query,
-          success: function(response) {
-            cb(JSON.parse(response));
-          },
-          error: function(xhr) {
-            console.log('error')
-          }
+      //customise the google sign in button
+      function renderButton() {
+        console.log('renderButton()');
+        gapi.signin2.render('google-signin', {
+          'scope': 'profile email',
+          'width': 50,
+          'height': 50,
+          'longtitle': true,
+          'theme': 'light',
+          'onsuccess': onSignIn,
+          'onfailure': onSignInFailure
         });
       }
+
+      function onSignInFailure(error) {
+        console.log(error);
+      }
+
+      function onSignIn(googleUser) {
+
+        //toggle visibility of signin/out buttons
+        $('#google-signin').addClass("google-button-hidden");
+        $('#google-signout').removeClass("google-button-hidden");
+
+        google_profile = googleUser.getBasicProfile();
+        console.log('ID: ' + google_profile.getId()); // Do not send to your backend! Use an ID token instead.
+        console.log('Name: ' + google_profile.getName());
+        console.log('Image URL: ' + google_profile.getImageUrl());
+        console.log('Email: ' + google_profile.getEmail()); // This is null if the 'email' scope is not present.
+        console.log(googleUser.getAuthResponse().id_token);
+
+        // Add the Google access token to the Cognito credentials login map.
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+          IdentityPoolId: identityPoolId,
+          region: 'ap-southeast-2',
+          Logins: {
+             'accounts.google.com': googleUser.getAuthResponse().id_token
+          }
+        });
+
+        // Obtain AWS credentials
+        AWS.config.credentials.get(function(){
+          var identityId = AWS.config.credentials.identityId;
+          var accessKeyId = AWS.config.credentials.accessKeyId;
+          var secretAccessKey = AWS.config.credentials.secretAccessKey;
+          var sessionToken = AWS.config.credentials.sessionToken;
+
+          apigClient = apigClientFactory.newClient({
+           accessKey: accessKeyId,
+           secretKey: secretAccessKey,
+           sessionToken: sessionToken,
+           region: region
+          });
+        });
+      }
+
+      function signOut() {
+
+        $('#google-signout').addClass("google-button-hidden")
+        $('#google-signin').removeClass("google-button-hidden")
+
+        var auth2 = gapi.auth2.getAuthInstance();
+        auth2.signOut().then(function () {
+          //console.log('User signed out.');
+          google_profile = null;
+        });
+      }
+
+
 
       /* ---- Google Maps ----*/
 
       function initMap() {
 
+        //position maps elements depending on viewer type
+        var drawingToolsPosition;
+        var customButtonsPosition;
+        var showZoomControl;
+
+        if (isMobile) {
+          //mobile
+          drawingToolsPosition = google.maps.ControlPosition.TOP_RIGHT;
+          customButtonsPosition = google.maps.ControlPosition.TOP_RIGHT;
+          showZoomControl = false;
+        }
+        else {
+          //desktop
+          drawingToolsPosition = google.maps.ControlPosition.TOP_CENTER;
+          customButtonsPosition = google.maps.ControlPosition.TOP_CENTER;
+          showZoomControl = true;
+        }
+
+        //create map
         var map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: 10.0, lng: 73.0},
           zoom: 3,
+          zoomControl: showZoomControl,
+          streetViewControl: false,
           mapTypeControlOptions: {
             style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-            position: google.maps.ControlPosition.TOP_RIGHT
+            position: google.maps.ControlPosition.LEFT_BOTTOM
           }
         });
 
@@ -200,8 +304,9 @@
           controlUI.style.borderRadius = '3px';
           controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
           controlUI.style.cursor = 'pointer';
-          controlUI.style.marginBottom = '22px';
+          controlUI.style.marginBottom = '5px';
           controlUI.style.marginRight = '5px';
+          controlUI.style.marginLeft = '5px';
           controlUI.style.marginTop = '5px';
           controlUI.style.textAlign = 'center';
           controlUI.title = 'Click to recenter the map';
@@ -235,7 +340,7 @@
         var clearControlDiv = document.createElement('div');
         var clearControl = new ClearControl(clearControlDiv, map);
         clearControlDiv.index = 1;
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(clearControlDiv);
+        map.controls[customButtonsPosition].push(clearControlDiv);
 
         function InfoControl(controlDiv, map) {
 
@@ -246,7 +351,7 @@
           controlUI.style.borderRadius = '3px';
           controlUI.style.boxShadow = '0 0.01px 4px rgba(0,0,0,.3)';
           controlUI.style.cursor = 'pointer';
-          controlUI.style.marginBottom = '22px';
+          controlUI.style.marginBottom = '5px';
           controlUI.style.marginTop = '5px';
           controlUI.style.textAlign = 'center';
           controlUI.title = 'info';
@@ -272,7 +377,7 @@
         var infoControlDiv = document.createElement('div');
         var infoControl = new InfoControl(infoControlDiv, map);
         infoControlDiv.index = 1;
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(infoControlDiv);
+        map.controls[customButtonsPosition].push(infoControlDiv);
 
         //keep reference to map markers, overlays
         var rectangle = null;
@@ -283,7 +388,7 @@
           drawingMode: null,
           drawingControl: true,
           drawingControlOptions: {
-            position: google.maps.ControlPosition.TOP_CENTER,
+            position:drawingToolsPosition,
             drawingModes: ['circle', 'polygon', 'rectangle']
           },
           markerOptions: {icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'},
@@ -344,7 +449,8 @@
           if (google_profile || devMode) {
 
             var shapeType = event.type;
-            var query = '';
+            var paramType = '';
+            var paramValue = '';
 
             if (shapeType == 'rectangle') {
 
@@ -353,7 +459,9 @@
 
                 overlays.push(event.overlay);
 
-                var query = 'boundingBox=' + [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
+                paramValue = [bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join();
+                paramType = 'boundingBox=';
+
                 console.log([bounds.f.f, bounds.b.b, bounds.f.b, bounds.b.f].join(' '))
               }
               else {
@@ -393,7 +501,9 @@
               }
             }
 
-            ajaxRequestTermini(query, function(result) {
+            //call ajaxRequestTermini (callback processes markers)
+            ajaxRequestTermini(paramType, paramValue, function(result) {
+
 
               var marker, i
               var termini = result.termini;
@@ -435,10 +545,33 @@
           //set back to grabber tool each time
           drawingManager.setDrawingMode(null);
         });
+      } //initMap() included drawing events
 
+
+      /* -- Ajaxey stuff --*/
+      function ajaxRequestTermini(paramType, paramValue, cb) {
+
+        var params = {};
+        var body = {};
+        var additionalParams = {
+          'queryParams': {
+            boundingBox : paramValue
+          }
+        };
+
+        apigClient.terminiGet(params, body, additionalParams)
+            .then(function(result){
+                //callback with response data
+                cb(result.data);
+            }).catch( function(result){
+            // Add error callback code here.
+            //console.log('apig error');
+        });
       }
+
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key={GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initMap"
          async defer></script>
+    <script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>
   </body>
 </html>

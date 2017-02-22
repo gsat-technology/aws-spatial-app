@@ -6,6 +6,15 @@ COGNITO_IDENTITY_POOL_ID=
 GOOGLE_CLIENT_ID=
 GOOGLE_MAPS_API_KEY=
 
+#requires JQ
+echo {} | jq
+
+if [ $? -ne 0 ]
+then
+  echo "please install JQ (https://stedolan.github.io/jq/)"
+  exit
+fi
+
 echo "getting output values from cloudformation stack"
 #get some values from cloudformation outputs
 OUTPUTS=$(aws cloudformation describe-stacks --stack-name termini | jq .Stacks[].Outputs)

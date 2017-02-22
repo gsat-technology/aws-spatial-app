@@ -459,4 +459,8 @@ Outputs:
     Description: APIG Id
     Value:
       !Ref APIGateway
-      
+
+  CognitoAuthedRoleArn:
+    Description: Cognito authed role arn
+    Value:
+      !GetAtt CognitoAuthedRole.Arn

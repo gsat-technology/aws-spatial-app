@@ -32,9 +32,12 @@ The database port is exposed to the host so that you can point `psql` (or a desk
 
 This is the [postgres/gis container](https://github.com/kartoza/docker-postgis). There are different versions around but this one does what I want it to do.
 
-###Deploy on AWS
+###Deploy
 
 ####Prerequisites
+
+#####Install JQ
+Some of the deployment tasks use the [command line tool 'JQ'](https://stedolan.github.io/jq/) which is a JSON processor. I use it in place of the AWS CLI's _--query_ flag for parsing JSON.
 
 #####Route53 domain
 
@@ -42,17 +45,19 @@ _TODO_
 
 ####Configure Google APIs
 
-1. goto: https://console.developers.google.com/apis/library
+1. Goto: https://console.developers.google.com/apis/library
 2. Create a new project (optionally; you could re-use an existing project) by clicking 'Create Project' in the menu bar dropdown.
 
 #####Obtain Google Client ID
+
+This will be used by Cognito.
 
 3. Left hand menu, select 'Credentials'
 4. Click 'Create Credentails'
 5. Choose 'OAuth Client ID'
 6. If prompted, configure consent screen (at least need to complete Product Name)
 7. Choose 'Application Type'='Web application'
-8. 'Authorized Javascript Origins'=<name of frontend website>
+8. 'Authorized Javascript Origins'=[name of frontend website]
 9. Save
 
 #####Obtain Google Maps API Key
@@ -65,7 +70,67 @@ _TODO_
 6. (Optionally) give it a name
 7. Under 'key restriction' choose 'HTTP referrers' and enter the fully qualified domain name of the website that this app will be deployed at.
 
+#####Create Cognito Identity Pool
 
+Cognito is not currently (at time of writing) supported in CloudFormation so it is necessary to create this using the AWS CLI. Identity Pools require an 'authenticated role' to function; this role will be created in Cloudformation and then we use another AWS CLI command to attach the role to the identity pool.
+
+Configure variables and run bash commands below:
+
+```
+POOL_NAME=termini
+COGNITO_REGION=<aws region>
+GOOGLE_CLIENT_ID=<google client id from previous step>
+
+aws cognito-identity create-identity-pool \
+    --region $COGNITO_REGION \
+    --identity-pool-name $POOL_NAME \
+    --no-allow-unauthenticated-identities \
+    --supported-login-providers accounts.google.com=$GOOGLE_CLIENT_ID \
+    | jq .IdentityPoolId --raw-output
+```
+Note the output identity pool id (this will be used as a Cloudformation parameter)
+
+#####Create CloudFormation Stack
+
+Create new CloudFormation stack using the `cf.yml` template and the below parameters:
+
+Parameters:
+```
+- Stack name: termini
+- CognitoIdentityPoolId: < id obtained from creating cognito identity pool >
+- HostedZoneName: < route53 hosted zone name (without trailing '.') >
+- KeyPairParameter: < select an existing SSH keypair >
+- LetsencryptEmail: < your email address to register with SSL cert >
+- SpatialServicesSubDomain: < subdomain (only - i.e. _not_ FQDN) e.g. 'spatialbackend' >
+- UbuntuAMIParameter < AMI for Ubuntu 16.04 for your target region >
+- WebsiteSubDomain: < subdomain (only - i.e. _not_ FQDN) e.g. 'termini' >
+```
+
+Note that the stack will reach the 'CREATED' status before the entire site is working because the EC2 instance will take a few minutes more to be fully provisioned (e.g. installing packages, docker etc. etc.)
+
+#####Set Cognito Identity Pool Role
+
+```
+COGNITO_ROLE_ARN=$(aws cloudformation describe-stacks \
+    --stack-name termini \
+    | jq .Stacks[].Outputs \
+    | jq .[] \
+    | jq 'select(.OutputKey == "CognitoAuthedRoleArn").OutputValue' --raw-output)
+
+COGNITO_POOL_ID=$(aws cloudformation describe-stacks \
+    --stack-name termini \
+    | jq .Stacks[].Parameters \
+    | jq .[] \
+    | jq 'select(.ParameterKey == "CognitoIdentityPoolId").ParameterValue' --raw-output)
+
+aws cognito-identity set-identity-pool-roles \
+    --identity-pool-id $COGNITO_POOL_ID \
+    --roles authenticated=$COGNITO_ROLE_ARN
+```
+
+#####Deploy website to S3
+
+_TODO_
 
 ###Run Locally
 

@@ -262,40 +262,16 @@ function initMap() {
 
     //shameless workaround to handle selections that span international dateline
     //returns true for bail-out and false for okay
-    function intl_dateline_bail(shapetype, lngs) {
-      console.log('bail');
-      console.log(lngs);
+    function hemisphere_check(shapetype, lngs) {
+      console.log('intl_dateline_bail(): ' + lngs);
 
-      east = [];
-      west = [];
+      //only need to process for polygon and rectangle
+      if (shapetype == 'polygon' || shapetype == 'rectangle') {
 
-      //special case for polygon
-      if (shapetype == 'polygon') {
-        //try and work out if the shape is near GMT or intl dateline
-        //if near to GMT, don't need to cancel
+        //first test is: are all longs in same hemisphere?
+        east = [];
+        west = [];
 
-        //near prime meridian
-        near_pm = []
-
-        for (var i=0; i < lngs.length; i++) {
-          if (lngs[i] > -90 && lngs[i] < 90) {
-            console.log("adding one");
-            near_pm.push(lngs[i]);
-          }
-        }
-
-        if (lngs.length == near_pm.length) {
-          //all longitudes are closer to pm than intl date line (this is okay)
-          console.log('okay');
-          return false;
-        }
-        else {
-          console.log('bail');
-          return true;
-        }
-      }
-      else {
-        //other shapes
         for (var i=0; i < lngs.length; i++) {
           if(lngs[i] > 0) {
             west.push(lngs[i]);
@@ -305,11 +281,34 @@ function initMap() {
           }
         }
 
+        //all are in east or all are in west
         if (east.length > 0 && west.length > 0) {
-          return true;
+          //at least one long is in different hemisphere
+          console.log('at least one long in different hemisphere');
+
+          //second test is: if some longs are in different
+          //hemispheres, then are they closer to pm or intl date line?
+          //near prime meridian
+          near_pm = []
+
+          for (var i=0; i < lngs.length; i++) {
+            if (lngs[i] > -90 && lngs[i] < 90) {
+              near_pm.push(lngs[i]);
+            }
+          }
+
+          if (lngs.length == near_pm.length) {
+            //all longitudes are closer to pm than intl date line (this is okay)
+            return true;
+          }
+          else {
+            return false;
+          }
         }
         else {
-          return false;
+          //all longs are in same hemisphere - this is okay
+          console.log('longs are in same hemisphere');
+          return true;
         }
       }
     }
@@ -323,7 +322,7 @@ function initMap() {
       if (shapeType == 'rectangle') {
 
         var bounds = event.overlay.bounds;
-        if (!intl_dateline_bail(shapeType, [bounds.b.b, bounds.b.f])) {
+        if (hemisphere_check(shapeType, [bounds.b.b, bounds.b.f])) {
 
           overlays.push(event.overlay);
 
@@ -353,7 +352,7 @@ function initMap() {
           lngs.push(points[i].lng());
         }
 
-        if (!intl_dateline_bail(shapeType, lngs)) {
+        if (hemisphere_check(shapeType, lngs)) {
 
           //keep reference to overlay
           overlays.push(event.overlay);

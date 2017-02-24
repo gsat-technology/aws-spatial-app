@@ -22,11 +22,12 @@ url = '{API_GATEWAY_ENDPOINT}';
 
 AWS.config.region = region;
 var apigClient = null;
+var stsExpire = null;
 
 
 /* ---- Google/Cognito Sign In ----*/
 
-var google_profile = null;
+var gUser = null;
 
 //customise the google sign in button
 function renderButton() {
@@ -45,32 +46,40 @@ function onSignInFailure(error) {
   //console.log(error);
 }
 
+
 function onSignIn(googleUser) {
+  console.log(googleUser);
 
   //toggle visibility of signin/out buttons
   $('#google-signin').addClass("google-button-hidden");
   $('#google-signout').removeClass("google-button-hidden");
 
-  google_profile = googleUser.getBasicProfile();
+  gUser = googleUser;
 
+  initAWS();
+}
+
+function initAWS() {
   // Add the Google access token to the Cognito credentials login map.
   AWS.config.credentials = new AWS.CognitoIdentityCredentials({
     IdentityPoolId: identityPoolId,
     region: 'ap-southeast-2',
     Logins: {
-       'accounts.google.com': googleUser.getAuthResponse().id_token
+       'accounts.google.com': gUser.getAuthResponse().id_token
     }
   });
 
+  console.log(AWS.config.credentials);
+
   // Obtain AWS credentials
   AWS.config.credentials.get(function(){
+
+    stsExpire = AWS.config.credentials.expireTime;
 
     var identityId = AWS.config.credentials.identityId;
     var accessKeyId = AWS.config.credentials.accessKeyId;
     var secretAccessKey = AWS.config.credentials.secretAccessKey;
     var sessionToken = AWS.config.credentials.sessionToken;
-
-    console.log(identityId);
 
     apigClient = apigClientFactory.newClient({
      accessKey: accessKeyId,
@@ -88,8 +97,8 @@ function signOut() {
 
   var auth2 = gapi.auth2.getAuthInstance();
   auth2.signOut().then(function () {
-    console.log('User signed out.');
-    google_profile = null;
+    //console.log('User signed out.');
+    gUser = null;
     //AWS.config.credentials = null;
     apigClient = null;
 
@@ -263,7 +272,6 @@ function initMap() {
     //shameless workaround to handle selections that span international dateline
     //returns true for bail-out and false for okay
     function hemisphere_check(shapetype, lngs) {
-      console.log('intl_dateline_bail(): ' + lngs);
 
       //only need to process for polygon and rectangle
       if (shapetype == 'polygon' || shapetype == 'rectangle') {
@@ -284,7 +292,6 @@ function initMap() {
         //all are in east or all are in west
         if (east.length > 0 && west.length > 0) {
           //at least one long is in different hemisphere
-          console.log('at least one long in different hemisphere');
 
           //second test is: if some longs are in different
           //hemispheres, then are they closer to pm or intl date line?
@@ -307,13 +314,23 @@ function initMap() {
         }
         else {
           //all longs are in same hemisphere - this is okay
-          console.log('longs are in same hemisphere');
           return true;
         }
       }
     }
 
-    if (google_profile || devMode) {
+    if (gUser || devMode) {
+      //user has signed into google
+
+      //if supplied cogntio session token is expired, then APIG responds with 403
+      // issue here is that it will not have a 'access-control-allow-origin' header
+      // and the browser will throw error. Because this involves CORS, it can't
+      // be caught in javascript so we need to try and not do a request where
+      // token is expired by calling initAWS() again.
+
+      if (Date.parse(stsExpire) <= Date.now() ) {
+        initAWS();
+      }
 
       var shapeType = event.type;
       var paramType = '';
@@ -439,23 +456,23 @@ function ajaxRequestTermini(paramType, paramValue, cb) {
   }
 
   apigClient.terminiGet(params, body, additionalParams)
-      .then(function(result){
-        //it appears that we catch 2xx codes here
-        //callback with response data
-        if (!("termini" in result.data) ) {
-            //discard - not the response we need
-        }
-        else {
-          //all good
-          cb(result.data);
-        }
-      }).catch( function(result){
-        //it appears that we catch 4xx and 5xx codes here
-        if (result.status == 403) {
-          //403 possibly caused by cognito token expiry
-          //let's just sign out the user for now
-          signOut();
-          $('#signedoutNotificationModal').modal();
-        }
+    .then(function(result){
+      //it appears that we catch 2xx codes here
+      //callback with response data
+      if (!("termini" in result.data) ) {
+          //discard - not the response we need
+      }
+      else {
+        //all good
+        cb(result.data);
+      }
+    }).catch( function(result){
+      //it appears that we catch 4xx and 5xx codes here
+      if (result.status == 403) {
+        //403 possibly caused by cognito token expiry
+        //let's just sign out the user for now
+        signOut();
+        $('#signedoutNotificationModal').modal();
+      }
   });
 }

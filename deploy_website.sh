@@ -17,7 +17,7 @@ fi
 
 echo "getting output values from cloudformation stack"
 #get some values from cloudformation outputs
-OUTPUTS=$(aws cloudformation describe-stacks --stack-name termini | jq .Stacks[].Outputs)
+OUTPUTS=$(aws cloudformation describe-stacks --region $AWS_REGION --stack-name termini | jq .Stacks[].Outputs)
 API_GATEWAY_ENDPOINT=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "APIGEndpoint").OutputValue' --raw-output)
 APIG_ID=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "APIGID").OutputValue' --raw-output)
 
@@ -26,7 +26,7 @@ echo  "  api gateway id: $APIG_ID"
 
 #download the customised API Gateway SDK to include in website resources
 echo "downloading api gateway sdk"
-aws apigateway get-sdk --rest-api-id $APIG_ID --stage-name LATEST --sdk-type javascript /tmp/apig.sdk.zip > /dev/null
+aws apigateway get-sdk --region $AWS_REGION --rest-api-id $APIG_ID --stage-name LATEST --sdk-type javascript /tmp/apig.sdk.zip > /dev/null
 
 
 RAND=$RANDOM
@@ -46,11 +46,21 @@ echo "adding api gateway sdk to website resources"
 #add in the API Gateway SDK
 unzip /tmp/apig.sdk.zip -d /tmp/$RAND/js/aws/ > /dev/null
 
+which minify > /dev/null
+if [ $? -eq 0 ]
+then
+  echo "doing minify"
+  minify /tmp/$RAND/js/termini.js > /tmp/$RAND/js/termini.js.min
+  mv /tmp/$RAND/js/termini.js.min /tmp/$RAND/js/termini.js
+else
+  echo "'minify' not available"
+fi
+
 echo "emptying bucket"
-aws s3 rm --recursive s3://$BUCKET
+aws s3 rm --recursive s3://$BUCKET --region $AWS_REGION
 
 echo "uploading website resources to S3 bucket"
-aws s3 cp --recursive /tmp/$RAND/ s3://$BUCKET
+aws s3 cp --recursive /tmp/$RAND/ s3://$BUCKET --region $AWS_REGION
 
 echo "cleaning up"
 rm -r /tmp/$RAND

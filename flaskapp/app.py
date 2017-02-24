@@ -44,7 +44,7 @@ def process_result(rows):
 
 
 def do_query(query_string):
-    print >> sys.stderr, query_string
+    #print >> sys.stderr, query_string
     cur = conn.cursor()
 
     try:
@@ -80,7 +80,7 @@ def validate_input(geo_data, type):
             v = geo_data.split(',')
 
             for ll in v:
-                print >> sys.stderr, ll
+                #print >> sys.stderr, ll
                 values_lst.append(ll)
 
         for v in values_lst:
@@ -101,7 +101,7 @@ def termini():
     query = ''
 
     if bbox:
-        print >> sys.stderr, bbox
+        #print >> sys.stderr, bbox
         coord = bbox.split(',')
 
         if validate_input(bbox, 'bbox'):
@@ -113,13 +113,13 @@ def termini():
 
 
     elif polygon:
-        print >> sys.stderr, 'polygon: ' + polygon
+        #print >> sys.stderr, 'polygon: ' + polygon
         if validate_input(polygon, 'polygon'):
 
             query = "SELECT * FROM termini WHERE ST_CONTAINS(ST_GeomFromText('POLYGON((%s))', 3857), geom_point);" % (polygon)
 
     elif circle:
-        print >> sys.stderr, circle
+        #print >> sys.stderr, circle
         if validate_input(circle, 'circle'):
             query = "select * FROM termini WHERE ST_Point_Inside_Circle(termini.geom_point, %s);" % (circle)
 
@@ -140,6 +140,8 @@ def termini():
     else:
         msg_jsn = {"usage": "query params: ['boundingBox=', 'polygon=', 'circle=']"}
         status = 400
+
+    print >> sys.stderr, status
 
     response = Response(json.dumps(msg_jsn), status=status)
     response.headers['Access-Control-Allow-Origin'] = '*'

@@ -2,7 +2,7 @@
 
 Example of a simple spatial app for searching for termini (airports, train stations etc.) across the world.
 
-<img style="float: right; width: 50%" src="https://raw.githubusercontent.com/gsat-technology/termini/master/resources/web_screenshot.png">
+<img style="display: block; margin-left: auto; margin-right: auto; width: 70%" src="https://raw.githubusercontent.com/gsat-technology/termini/master/resources/web_screenshot.png">
 
 ###Acknowledgement
 

@@ -21,7 +21,7 @@ _Architecture diagram (work in progress)_
 - Postgis (container 2) performs spatial queries on data
 
 
-####Backend EC2 instance details
+####Spatial backend EC2 instance details
 
 #####Docker
 
@@ -36,12 +36,34 @@ This is the [postgres/gis container](https://github.com/kartoza/docker-postgis).
 
 ####Prerequisites
 
+#####Choose a region
+
+You should consider which AWS region you want to deploy in as not all AWS services are available in all regions.
+For example, Cognito, API Gateway, and Lambda are not available in all regions.
+
+[Check here for availability](https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/).
+
 #####Install JQ
 Some of the deployment tasks use the [command line tool 'JQ'](https://stedolan.github.io/jq/) which is a JSON processor. I use it in place of the AWS CLI's _--query_ flag for parsing JSON.
 
 #####Route53 domain
 
-_TODO_
+You need to have a _public_ hosted zone in Route53 for 2 subdomains to be created. You don't need to explicitly create these subdomains, they will be provisioned by CloudFormation.
+
+Description of subdomains:
+
+######1. Spatial backend service
+
+`e.g. spatialbackend.your.domain`
+
+A subdomain for the ec2 instance running the spatial service. This is required because API Gateway will proxy requests to this instance and needs to be secured with HTTPS to take advantage of API Gateway's client SSL certificate feature.
+
+######2. Public S3 Website
+
+`e.g. termini.your.domain`
+
+This subdomain will point to the website-enabled s3 bucket which will serve the static website.
+
 
 ####Configure Google APIs
 
@@ -70,7 +92,7 @@ This will be used by Cognito.
 6. (Optionally) give it a name
 7. Under 'key restriction' choose 'HTTP referrers' and enter the fully qualified domain name of the website that this app will be deployed at.
 
-#####Create Cognito Identity Pool
+####Create Cognito Identity Pool
 
 Cognito is not currently (at time of writing) supported in CloudFormation so it is necessary to create this using the AWS CLI. Identity Pools require an 'authenticated role' to function; this role will be created in Cloudformation and then we use another AWS CLI command to attach the role to the identity pool.
 
@@ -78,7 +100,7 @@ Configure variables and run bash commands below:
 
 ```
 POOL_NAME=termini
-COGNITO_REGION=<aws region>
+COGNITO_REGION=<aws region e.g. ap-southeast-2>
 GOOGLE_CLIENT_ID=<google client id from previous step>
 
 aws cognito-identity create-identity-pool \
@@ -90,7 +112,7 @@ aws cognito-identity create-identity-pool \
 ```
 Note the output identity pool id (this will be used as a Cloudformation parameter)
 
-#####Create CloudFormation Stack
+####Create CloudFormation Stack
 
 Create new CloudFormation stack using the `cf.yml` template and the below parameters:
 
@@ -108,29 +130,58 @@ Parameters:
 
 Note that the stack will reach the 'CREATED' status before the entire site is working because the EC2 instance will take a few minutes more to be fully provisioned (e.g. installing packages, docker etc. etc.)
 
-#####Set Cognito Identity Pool Role
+####Set Cognito Identity Pool Role
+
+When the CloudFormation stack has reached the 'CREATED' status, run the below CLI commands to attach the IAM roles defined in CloudFormation to the Cognito Identity Pool.
 
 ```
+AWS_REGION=<aws region>
+
 COGNITO_ROLE_ARN=$(aws cloudformation describe-stacks \
+    --region $AWS_REGION \
     --stack-name termini \
     | jq .Stacks[].Outputs \
     | jq .[] \
     | jq 'select(.OutputKey == "CognitoAuthedRoleArn").OutputValue' --raw-output)
 
 COGNITO_POOL_ID=$(aws cloudformation describe-stacks \
+    --region $AWS_REGION \
     --stack-name termini \
     | jq .Stacks[].Parameters \
     | jq .[] \
     | jq 'select(.ParameterKey == "CognitoIdentityPoolId").ParameterValue' --raw-output)
 
 aws cognito-identity set-identity-pool-roles \
+    --region $AWS_REGION \
     --identity-pool-id $COGNITO_POOL_ID \
     --roles authenticated=$COGNITO_ROLE_ARN
 ```
 
-#####Deploy website to S3
+####Deploy website to S3
 
-_TODO_
+Edit the parameters at the top of `deploy_website.sh`
+
+```
+BUCKET=<the name of the public website bucket>
+AWS_REGION=<aws region e.g. ap-southeast-2>
+COGNITO_IDENTITY_POOL_ID= <id from 'Create Cognito Identity Pool' step>
+GOOGLE_CLIENT_ID=<id from 'Obtain Google Client ID' step'>
+GOOGLE_MAPS_API_KEY=<key from 'Obtain Google Maps API Key' step'>
+```
+
+Then run script
+
+_If [minifier](https://www.npmjs.com/package/minifier) is installed, then `termini.js` will get minified_
+
+```
+./deploy_website.sh
+```
+
+####Test
+
+In your browser, you should now be able to navigate to http://termini.your.domain (or whatever you named it).
+
+If everything has been deployed correctly, you should have a full-screen google map.
 
 ###Run Locally
 

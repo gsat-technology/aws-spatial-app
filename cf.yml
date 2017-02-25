@@ -4,6 +4,14 @@ Parameters:
     Type: String
     Description: the _pre-existing_ id for a cognito identity pool
 
+  GoogleClientID:
+    Type: String
+    Description: the _pre-existing_ id for google oauth
+
+  GoogleMapsAPIKey:
+    Type: String
+    Description: the _pre-existing_ google maps api key
+
   HostedZoneName:
     Type: String
     Description: Route53 hosted zone domain name e.g. yourdomain.com (don't include trailing '.')
@@ -448,23 +456,23 @@ Resources:
                   - execute-api:Invoke
                 Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${APIGateway}/LATEST/GET/termini
 
-  LogGroupAPIGBase:
-    Type: "AWS::Logs::LogGroup"
-    Properties:
-      LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}
-      RetentionInDays: 1
-
-  LogGroupAPIGLatest:
-    Type: "AWS::Logs::LogGroup"
-    Properties:
-      LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}/LATEST
-      RetentionInDays: 1
-
-  LogGroupAPIGDummyStage:
-    Type: "AWS::Logs::LogGroup"
-    Properties:
-      LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}/dummystage
-      RetentionInDays: 1
+  # LogGroupAPIGBase:
+  #   Type: "AWS::Logs::LogGroup"
+  #   Properties:
+  #     LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}
+  #     RetentionInDays: 1
+  #
+  # LogGroupAPIGLatest:
+  #   Type: "AWS::Logs::LogGroup"
+  #   Properties:
+  #     LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}/LATEST
+  #     RetentionInDays: 1
+  #
+  # LogGroupAPIGDummyStage:
+  #   Type: "AWS::Logs::LogGroup"
+  #   Properties:
+  #     LogGroupName: !Sub API-Gateway-Execution-Logs_${APIGateway}/dummystage
+  #     RetentionInDays: 1
 
 Outputs:
   APIGEndpoint:
@@ -481,3 +489,23 @@ Outputs:
     Description: Cognito authed role arn
     Value:
       !GetAtt CognitoAuthedRole.Arn
+
+  PublicWebsiteS3Bucket:
+    Description: Public website bucket name
+    Value: !Ref PublicWebsiteS3Bucket
+
+  CognitoIdentityPoolId:
+    Description: cognito identity pool id
+    Value: !Ref CognitoIdentityPoolId
+
+  GoogleClientID:
+    Description: google oauth client id
+    Value: !Ref GoogleClientID
+
+  GoogleMapsAPIKey:
+    Description: google maps api key
+    Value: !Ref GoogleMapsAPIKey
+
+  Region:
+    Description: aws region of this deployment
+    Value: !Ref AWS::Region

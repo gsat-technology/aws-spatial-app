@@ -1,13 +1,9 @@
 #!/bin/bash
 
-BUCKET=
-AWS_REGION=
-COGNITO_IDENTITY_POOL_ID=
-GOOGLE_CLIENT_ID=
-GOOGLE_MAPS_API_KEY=
+AWS_REGION=<deployment region e.g. ap-southeast-2>
 
 #requires JQ
-echo {} | jq
+which jq
 
 if [ $? -ne 0 ]
 then
@@ -18,8 +14,14 @@ fi
 echo "getting output values from cloudformation stack"
 #get some values from cloudformation outputs
 OUTPUTS=$(aws cloudformation describe-stacks --region $AWS_REGION --stack-name termini | jq .Stacks[].Outputs)
+
 API_GATEWAY_ENDPOINT=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "APIGEndpoint").OutputValue' --raw-output)
 APIG_ID=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "APIGID").OutputValue' --raw-output)
+BUCKET=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "PublicWebsiteS3Bucket").OutputValue' --raw-output)
+COGNITO_IDENTITY_POOL_ID=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "CognitoIdentityPoolId").OutputValue' --raw-output)
+GOOGLE_CLIENT_ID=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "GoogleClientID").OutputValue' --raw-output)
+GOOGLE_MAPS_API_KEY=$(echo $OUTPUTS | jq .[] | jq 'select(.OutputKey == "GoogleMapsAPIKey").OutputValue' --raw-output)
+
 
 echo  "  api gateway stage (LATEST) endpoint: $API_GATEWAY_ENDPOINT"
 echo  "  api gateway id: $APIG_ID"

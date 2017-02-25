@@ -119,7 +119,9 @@ Create new CloudFormation stack using the `cf.yml` template and the below parame
 Parameters:
 ```
 - Stack name: termini
-- CognitoIdentityPoolId: < id obtained from creating cognito identity pool >
+- CognitoIdentityPoolId: < id obtained from creating cognito identity pool in previous step >
+- GoogleClientID: < id obtained in previous step >
+- GoogleMapsAPIKey: < id obtained in previous step >
 - HostedZoneName: < route53 hosted zone name (without trailing '.') >
 - KeyPairParameter: < select an existing SSH keypair >
 - LetsencryptEmail: < your email address to register with SSL cert >
@@ -162,11 +164,7 @@ aws cognito-identity set-identity-pool-roles \
 Edit the parameters at the top of `deploy_website.sh`
 
 ```
-BUCKET=<the name of the public website bucket>
 AWS_REGION=<aws region e.g. ap-southeast-2>
-COGNITO_IDENTITY_POOL_ID= <id from 'Create Cognito Identity Pool' step>
-GOOGLE_CLIENT_ID=<id from 'Obtain Google Client ID' step'>
-GOOGLE_MAPS_API_KEY=<key from 'Obtain Google Maps API Key' step'>
 ```
 
 Then run script

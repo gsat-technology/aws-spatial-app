@@ -2,7 +2,7 @@
 
 Example of a simple spatial app for searching for termini (airports, train stations etc.) across the world.
 
-<img style="display: block; margin-left: auto; margin-right: auto; width: 70%" src="https://raw.githubusercontent.com/gsat-technology/termini/master/resources/web_screenshot.png">
+<img style="display: block; margin-left: auto; margin-right: auto; width: 50%" src="https://raw.githubusercontent.com/gsat-technology/termini/master/resources/web_screenshot.png">
 
 ###Acknowledgement
 
@@ -10,15 +10,12 @@ Spatial data in this application was obtained as [csv data](https://raw.githubus
 
 ###High Level Overview
 
-_Architecture diagram (work in progress)_
+<img style="display: block; margin-left: auto; margin-right: auto; width: 50%" src="https://raw.githubusercontent.com/gsat-technology/termini/master/resources/termini_high_level.png">
 
-- Static html/javascript WUI frontend
-- AWS API Gateway with EC2 backend to perform spatial queries
-- EC2 backend secured with API Gateway client SSL certificate
-- Entire setup automated to deploy easily with cloudformation
-- Docker-compose runs on EC2 with 2 containers
-- Flask app (container 1) logic layer
-- Postgis (container 2) performs spatial queries on data
+- static html/javascript frontend website
+- user authentication with Google+
+- temporary, limited privilege AWS credentials to perform GET requests to API Gateway
+- API Gateway proxies requests to EC2 instance
 
 
 ####Spatial backend EC2 instance details
